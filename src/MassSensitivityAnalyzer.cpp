@@ -19,8 +19,6 @@ MassSensitivityAnalyzer::MassSensitivityAnalyzer(TH1D* h0, TH1D* h1, double delt
 
     double fisher = 0.0;
 
-    std::cout << "norm0 norm1" << norm0 << " " << norm1;
-
     for (int i = 1; i <= h0->GetNbinsX(); ++i)
     {
         double p0 = h0->GetBinContent(i) / norm0;

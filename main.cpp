@@ -6,13 +6,12 @@
 #include <SpectrumBuilder.hpp>
 #include <MassSensitivityAnalyzer.hpp>
 
-#include <TH1.h>
-
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <chrono>
 
 
 namespace fs = std::filesystem;
@@ -23,10 +22,11 @@ struct Parameters
     double W_MASS0;
     double W_MASS1;
     double W_WIDTH;
+    std::size_t EVENT_COUNT;
 };
 
 
-Parameters readParameters(const std::string& filename)
+Parameters read_parameters(const std::string& filename)
 {
     Parameters p{};
 
@@ -41,35 +41,31 @@ Parameters readParameters(const std::string& filename)
     {
         if (parameter == "W_MASS0")
             file >> p.W_MASS0;
-
         else if (parameter == "W_MASS1")
             file >> p.W_MASS1;
-
         else if (parameter == "W_WIDTH")
             file >> p.W_WIDTH;
-
+        else if(parameter == "EVENT_COUNT")
+            file >> p.EVENT_COUNT;
         else
-            throw std::runtime_error(
-                "Parametro sconosciuto: " + parameter
-            );
+            throw std::runtime_error{ "Parametro sconosciuto: " + parameter };
     }
 
     return p;
 }
 
 
-void saveHistogram(TH1* hist, const std::string& filename)
+void save_histogram(TH1* hist, const std::string& filename)
 {
     if (!hist)
-        throw std::runtime_error("Istogramma nullo");
+        throw std::runtime_error{ "Istogramma nullo" };
 
-
-    TCanvas canvas(
+    TCanvas canvas{
         "canvas",
         hist->GetTitle(),
         800,
         600
-    );
+    };
 
     hist->Draw("HIST");
 
@@ -82,6 +78,8 @@ const char* output_file{ DATA_DIR "/results/sigma_mass.txt" };
 
 int main(int argc, char** argv)
 {
+    auto start{ std::chrono::high_resolution_clock::now() };
+
     TApplication app("app", &argc, argv);
 
     gROOT->SetBatch(true);
@@ -89,7 +87,7 @@ int main(int argc, char** argv)
     fs::create_directories("results");
 
 
-    auto params { readParameters(input_file) };
+    auto params { read_parameters(input_file) };
 
 
     double W_DELTA =
@@ -113,11 +111,11 @@ int main(int argc, char** argv)
         pT_gen.get()
     };
 
-    auto pdf0{ SpectrumBuilder{sampler0}.releaseHist() };
-    auto pdf1{ SpectrumBuilder{sampler1}.releaseHist() };
+    auto pdf0{ SpectrumBuilder{sampler0, params.EVENT_COUNT}.releaseHist() };
+    auto pdf1{ SpectrumBuilder{sampler1, params.EVENT_COUNT}.releaseHist() };
 
-    saveHistogram(pdf0.get(), "results/pdf_Wmass0.png");
-    saveHistogram(pdf1.get(), "results/pdf_Wmass1.png");
+    save_histogram(pdf0.get(), "results/pdf_Wmass0.png");
+    save_histogram(pdf1.get(), "results/pdf_Wmass1.png");
 
 
     MassSensitivityAnalyzer analyzer{
@@ -129,22 +127,22 @@ int main(int argc, char** argv)
     auto ratioHist{ analyzer.releaseRatioHist() };
     double sigma{ analyzer.sigma() };
 
-    saveHistogram(ratioHist.get(), "results/template_ratio.png");
+    save_histogram(ratioHist.get(), "results/template_ratio.png");
+
+    auto end{ std::chrono::high_resolution_clock::now() };
+    auto elapsed{ std::chrono::duration_cast<std::chrono::milliseconds>(end - start) };
 
     std::ofstream output{ output_file };
     if (!output)
         throw std::runtime_error{ "Impossibile creare sigma_mass.txt" };
 
-    output
-        << "W mass sensitivity\n\n"
-        << "W_MASS0 = " << params.W_MASS0 << " GeV\n"
-        << "W_MASS1 = " << params.W_MASS1 << " GeV\n"
-        << "W_WIDTH = " << params.W_WIDTH << " GeV\n\n"
-        << "delta_mass = " << W_DELTA << " GeV\n"
-        << "sigma_mass = " << sigma << " GeV\n";
+    output << "sigma_mass = " << sigma << " GeV\n\n"
+           << "Execution time = " << elapsed.count() / 1000. << " s\n";
+
     output.close();
 
-    std::cout << "sigma_mass = " << sigma << " GeV\n";
+    std::cout << "sigma_mass = " << sigma << " GeV\n\n"
+              << "Execution time = " << elapsed.count() / 1000. << " s\n";
 
     return 0;
 }

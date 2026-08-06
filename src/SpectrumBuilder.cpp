@@ -1,9 +1,10 @@
 #include "SpectrumBuilder.hpp"
 #include <ROOT/RDataFrame.hxx>
 
-SpectrumBuilder::SpectrumBuilder(const WDecaySampler& sampler)
+SpectrumBuilder::SpectrumBuilder(const WDecaySampler& sampler, std::size_t event_count)
+: event_count{ event_count }
 {
-    ROOT::RDataFrame df(EVENT_COUNT);
+    ROOT::RDataFrame df{ event_count };
 
     auto h_muon_pt = df.Define("muon_pT", [&sampler](){
         return sampler();
@@ -24,7 +25,10 @@ TH1D* SpectrumBuilder::getHist() const
 {
     return hist.get();
 }
+
 std::unique_ptr<TH1D> SpectrumBuilder::releaseHist()
 {
     return std::move(hist);
 }
+
+std::size_t SpectrumBuilder::get_event_count() const { return event_count; }

@@ -9,7 +9,7 @@ class SpectrumBuilder
 {
 public:
     SpectrumBuilder() = delete;
-    SpectrumBuilder(const WDecaySampler& sampler);
+    SpectrumBuilder(const WDecaySampler& sampler, std::size_t event_count);
 
     SpectrumBuilder(const SpectrumBuilder&) = delete;
     SpectrumBuilder& operator=(const SpectrumBuilder&) = delete;
@@ -20,14 +20,15 @@ public:
     static constexpr double MIN_MUON_PT = 26.0; // GeV/c
     static constexpr double MAX_MUON_PT = 56.0; // GeV/c
     static constexpr std::size_t BIN_COUNT = 30; 
-    static constexpr std::size_t EVENT_COUNT = 5'000'000;
-
     
     TH1D* getHist() const;
     std::unique_ptr<TH1D> releaseHist();
+    std::size_t get_event_count() const;
 
     ~SpectrumBuilder() = default;
 private:
+    std::size_t event_count;
+
     std::unique_ptr<TH1D> hist;
 };
 
