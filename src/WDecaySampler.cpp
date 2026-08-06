@@ -81,7 +81,7 @@ double WDecaySampler::operator()() const
 }
 PT_Generator::PT_Generator()
 {
-    TFile file("distribution_pTW.root");
+    TFile file(path);
 
     if(file.IsZombie()) {
         throw std::runtime_error("impossibile aprire il file");

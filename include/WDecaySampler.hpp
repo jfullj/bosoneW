@@ -42,7 +42,7 @@ public:
     virtual std::unique_ptr<Generator> clone() const;
     virtual ~PT_Generator() = default;
 
-    static constexpr char* path{ "distribution_pTW.root" };
+    static const inline char* path{ DATA_DIR "/distribution_pTW.root" };
 private:
     PT_Generator(const PT_Generator&);
 
