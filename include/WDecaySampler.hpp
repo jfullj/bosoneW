@@ -1,0 +1,78 @@
+#ifndef WDECAYSAMPLER_HPP
+#define WDECAYSAMPLER_HPP
+
+#include <functional>
+#include <memory>
+#include <atomic>
+#include <TRandom3.h>
+#include <TH1.h>
+
+class ThreadID
+{
+public:
+    static std::size_t get() 
+    {
+        thread_local std::size_t local_ID{ ID.fetch_add(1) };
+        return local_ID;
+    }
+private:
+    static inline std::atomic<std::size_t> ID{ 0 };
+};
+
+class Generator
+{
+public:
+    virtual double operator()() = 0;
+    virtual std::unique_ptr<Generator> clone() const = 0;
+    virtual ~Generator() {};
+};
+
+class PT_Generator : public Generator
+{
+public:
+    PT_Generator();
+
+    PT_Generator& operator=(const PT_Generator&) = delete;
+
+
+    PT_Generator(PT_Generator&&) = default;
+    PT_Generator& operator=(PT_Generator&&) = delete;
+
+    virtual double operator()();
+    virtual std::unique_ptr<Generator> clone() const;
+    virtual ~PT_Generator() = default;
+
+    static constexpr char* path{ "distribution_pTW.root" };
+private:
+    PT_Generator(const PT_Generator&);
+
+    std::unique_ptr<TH1D> hist;
+    std::unique_ptr<TRandom3> rng;
+};
+
+class WDecaySampler
+{
+public:
+    WDecaySampler() = delete;
+    explicit WDecaySampler(double WMass, double WWidth, const Generator * const pT_generator);
+
+    WDecaySampler(const WDecaySampler&) = default;
+    WDecaySampler& operator=(const WDecaySampler&) = default;
+
+    WDecaySampler(WDecaySampler&&) = default;
+    WDecaySampler& operator=(WDecaySampler&&) = default;
+
+    double operator()() const;
+
+    ~WDecaySampler() = default;
+
+    static constexpr double ETA_MIN = -2.4;
+    static constexpr double ETA_MAX = 2.4;
+    static constexpr double MUON_MASS = 0.105658; // GeV/c^2
+private:
+    double WMass, WWidth;
+    std::vector<std::unique_ptr<Generator>> pT_local_generators;
+};
+
+
+#endif //WDECAYSAMPLER_HPP

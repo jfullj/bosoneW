@@ -1,0 +1,30 @@
+#include "SpectrumBuilder.hpp"
+#include <ROOT/RDataFrame.hxx>
+
+SpectrumBuilder::SpectrumBuilder(const WDecaySampler& sampler)
+{
+    ROOT::RDataFrame df(EVENT_COUNT);
+
+    auto h_muon_pt = df.Define("muon_pT", [&sampler](){
+        return sampler();
+    })
+    .Filter([=](double muon_pT){ return muon_pT > MIN_MUON_PT && muon_pT < MAX_MUON_PT;}, {"muon_pT"})
+    .Histo1D({
+        "h_pt",
+        "Muon pT;p_{T}^{#mu} [GeV];Events",
+        BIN_COUNT,
+        MIN_MUON_PT,
+        MAX_MUON_PT 
+    }, "muon_pT" );
+
+    hist = std::unique_ptr<TH1D>(dynamic_cast<TH1D*>(h_muon_pt->Clone("h_pt")));
+}
+
+TH1D* SpectrumBuilder::getHist() const
+{
+    return hist.get();
+}
+std::unique_ptr<TH1D> SpectrumBuilder::releaseHist()
+{
+    return std::move(hist);
+}
