@@ -9,11 +9,13 @@ SpectrumBuilder::SpectrumBuilder(const WDecaySampler& sampler, std::size_t event
     auto h_muon_pt = df.Define("muon", [&sampler](){
         return sampler();
     })
-    .Define("muon_pT", [](std::pair<double, double> muon){ return muon.first; }, {"muon"})
-    .Define("muon_eta", [](std::pair<double, double> muon){ return muon.second; }, {"muon"})
-    .Filter([=](double muon_pT, double muon_eta){
+    .Define("muon_pT", [](WDecaySampler::Event muon){ return muon.muon_pT; }, {"muon"})
+    .Define("muon_eta", [](WDecaySampler::Event muon){ return muon.muon_eta; }, {"muon"})
+    .Define("mT", [](WDecaySampler::Event muon){ return muon.mT; }, {"muon"})
+    .Filter([=](double muon_pT, double muon_eta, double mT){
          return (muon_pT > MIN_MUON_PT && muon_pT < MAX_MUON_PT) &&
-                (muon_eta > MIN_ETA && muon_eta < MAX_ETA);}, {"muon_pT", "muon_eta"})
+                (muon_eta > MIN_ETA && muon_eta < MAX_ETA) &&
+                mT > MIN_TRANSVERSE_MASS;}, {"muon_pT", "muon_eta", "mT"})
     .Histo1D({
         "h_pt",
         "Muon pT;p_{T}^{#mu} [GeV];Events",

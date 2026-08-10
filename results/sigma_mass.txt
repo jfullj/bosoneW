@@ -1,3 +1,3 @@
-sigma_mass = 0.00234061 GeV
+sigma_mass = 0.00219737 GeV
 
-Execution time = 21.256 s
+Execution time = 27.727 s

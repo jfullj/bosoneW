@@ -4,6 +4,7 @@
 #include <Math/Boost.h>
 #include <Math/Vector3D.h>
 #include <Math/Vector4D.h>
+#include <Math/VectorUtil.h>
 #include <random>
 #include <thread>
 
@@ -68,7 +69,7 @@ double generate_random_phi(Func&& rand) {
     return rand() * 2.0 * M_PI;
 } 
 
-std::pair<double,double> WDecaySampler::operator()() const
+WDecaySampler::Event WDecaySampler::operator()() const
 {
     thread_local auto rand = [](){
         thread_local std::mt19937 gen(
@@ -87,6 +88,8 @@ std::pair<double,double> WDecaySampler::operator()() const
     double invariant_mass{ generate_random_invariant_mass(WMass, WWidth, rand) };
     auto muon_p{ generate_random_muon_p_rest_frame(invariant_mass, MUON_MASS, rand) };
 
+    auto neutrino_p{ - muon_p };
+
     ROOT::Math::PtEtaPhiMVector W_p{ pTW, eta, phi, invariant_mass };
 
     ROOT::Math::XYZVector beta{
@@ -97,8 +100,16 @@ std::pair<double,double> WDecaySampler::operator()() const
 
     ROOT::Math::Boost boost(beta);
     muon_p = boost(muon_p);
+    neutrino_p = boost(neutrino_p);
 
-    return { muon_p.Pt(), muon_p.Eta() };
+    double pt_mu = muon_p.Pt();
+    double pt_nu = neutrino_p.Pt();
+
+    double dphi = ROOT::Math::VectorUtil::DeltaPhi(muon_p, neutrino_p);
+
+    double mt = std::sqrt(2.0 * pt_mu * pt_nu * (1.0 - std::cos(dphi)));
+
+    return { pt_mu, muon_p.Eta(), mt };
 
 }
 PT_Generator::PT_Generator()

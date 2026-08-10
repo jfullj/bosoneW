@@ -21,6 +21,7 @@ public:
     static constexpr double MAX_MUON_PT = 56.0; // GeV/c
     static constexpr double MIN_ETA = -2.4;
     static constexpr double MAX_ETA = 2.4;
+    static constexpr double MIN_TRANSVERSE_MASS = 40; //GeV/c
 
     static constexpr std::size_t BIN_COUNT = 30; 
     

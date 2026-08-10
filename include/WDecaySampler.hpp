@@ -53,6 +53,13 @@ private:
 class WDecaySampler
 {
 public:
+    struct Event
+    {
+        double muon_pT;
+        double muon_eta;
+        double mT;
+    };
+
     WDecaySampler() = delete;
     explicit WDecaySampler(double WMass, double WWidth, const Generator * const pT_generator);
 
@@ -62,7 +69,7 @@ public:
     WDecaySampler(WDecaySampler&&) = default;
     WDecaySampler& operator=(WDecaySampler&&) = default;
 
-    std::pair<double, double> operator()() const;
+    Event operator()() const;
 
     ~WDecaySampler() = default;
 
