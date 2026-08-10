@@ -22,8 +22,25 @@ WDecaySampler::WDecaySampler(double WMass, double WWidth, const Generator * cons
 }
 
 template<std::invocable Func>
-double generate_random_eta(double eta_min, double eta_max, Func&& rand) {
-    return (rand() * (eta_max - eta_min) + eta_min);
+double generate_random_gaussian(double mean, double sigma,Func&& rand)
+{
+    double u1 = rand();
+    double u2 = rand();
+
+    while (u1 <= 0.0)
+        u1 = rand();
+
+    double z = std::sqrt(-2.0 * std::log(u1))
+             * std::cos(2.0 * M_PI * u2);
+
+    return mean + sigma * z;
+}
+
+template<std::invocable Func>
+double generate_random_eta(Func&& rand) {
+    //TODO: definire una distribuzione effettiva
+
+    return generate_random_gaussian(0, 2, rand);
 }
 
 template<std::invocable Func>
@@ -51,7 +68,7 @@ double generate_random_phi(Func&& rand) {
     return rand() * 2.0 * M_PI;
 } 
 
-double WDecaySampler::operator()() const
+std::pair<double,double> WDecaySampler::operator()() const
 {
     thread_local auto rand = [](){
         thread_local std::mt19937 gen(
@@ -63,7 +80,9 @@ double WDecaySampler::operator()() const
     };
 
     double pTW{ (*pT_local_generators[ThreadID::get()])() };
-    double eta{ generate_random_eta(ETA_MIN, ETA_MAX, rand) };
+
+    //eta ancora non ben specificato
+    double eta{ generate_random_eta(rand) };
     double phi{ generate_random_phi(rand)};
     double invariant_mass{ generate_random_invariant_mass(WMass, WWidth, rand) };
     auto muon_p{ generate_random_muon_p_rest_frame(invariant_mass, MUON_MASS, rand) };
@@ -79,7 +98,8 @@ double WDecaySampler::operator()() const
     ROOT::Math::Boost boost(beta);
     muon_p = boost(muon_p);
 
-    return muon_p.Pt();
+    return { muon_p.Pt(), muon_p.Eta() };
+
 }
 PT_Generator::PT_Generator()
 {

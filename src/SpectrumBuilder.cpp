@@ -6,10 +6,14 @@ SpectrumBuilder::SpectrumBuilder(const WDecaySampler& sampler, std::size_t event
 {
     ROOT::RDataFrame df{ event_count };
 
-    auto h_muon_pt = df.Define("muon_pT", [&sampler](){
+    auto h_muon_pt = df.Define("muon", [&sampler](){
         return sampler();
     })
-    .Filter([=](double muon_pT){ return muon_pT > MIN_MUON_PT && muon_pT < MAX_MUON_PT;}, {"muon_pT"})
+    .Define("muon_pT", [](std::pair<double, double> muon){ return muon.first; }, {"muon"})
+    .Define("muon_eta", [](std::pair<double, double> muon){ return muon.second; }, {"muon"})
+    .Filter([=](double muon_pT, double muon_eta){
+         return (muon_pT > MIN_MUON_PT && muon_pT < MAX_MUON_PT) &&
+                (muon_eta > MIN_ETA && muon_eta < MAX_ETA);}, {"muon_pT", "muon_eta"})
     .Histo1D({
         "h_pt",
         "Muon pT;p_{T}^{#mu} [GeV];Events",

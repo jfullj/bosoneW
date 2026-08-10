@@ -62,12 +62,10 @@ public:
     WDecaySampler(WDecaySampler&&) = default;
     WDecaySampler& operator=(WDecaySampler&&) = default;
 
-    double operator()() const;
+    std::pair<double, double> operator()() const;
 
     ~WDecaySampler() = default;
 
-    static constexpr double ETA_MIN = -2.4;
-    static constexpr double ETA_MAX = 2.4;
     static constexpr double MUON_MASS = 0.105658; // GeV/c^2
 private:
     double WMass, WWidth;
