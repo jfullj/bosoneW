@@ -60,14 +60,10 @@ Parameters read_parameters(const std::string& filename)
 const std::size_t HIST_WIDTH = 1280;
 const std::size_t HIST_HEIGHT = 720;
 
-void save_histogram(TH1* hist, const std::string& filename)
+void save_histogram(TH1* hist, const std::string& filename, bool norm_hist = true)
 {
     if (!hist)
         throw std::runtime_error{"Istogramma nullo"};
-
-    // =========================
-    // Istogramma originale
-    // =========================
 
     TCanvas canvas{
         "canvas",
@@ -100,6 +96,8 @@ void save_histogram(TH1* hist, const std::string& filename)
 
     canvas.SaveAs(filename.c_str());
 
+    if(!norm_hist)
+        return;
     // Istogramma normalizzato
 
     std::unique_ptr<TH1> hist_norm{
@@ -217,7 +215,7 @@ int main(int argc, char** argv)
     auto ratioHist{ analyzer.releaseRatioHist() };
     double sigma{ analyzer.sigma() };
 
-    save_histogram(ratioHist.get(), DATA_DIR "/results/template_ratio.png");
+    save_histogram(ratioHist.get(), DATA_DIR "/results/template_ratio.png", false);
 
     auto end{ std::chrono::high_resolution_clock::now() };
     auto elapsed{ std::chrono::duration_cast<std::chrono::milliseconds>(end - start) };

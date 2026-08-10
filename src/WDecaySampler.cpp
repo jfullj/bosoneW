@@ -41,7 +41,8 @@ template<std::invocable Func>
 double generate_random_eta(Func&& rand) {
     //TODO: definire una distribuzione effettiva
 
-    return generate_random_gaussian(0, 2, rand);
+    double cos_theta = rand() * 2.0 - 1.0;
+    return std::atanh(cos_theta);
 }
 
 template<std::invocable Func>
