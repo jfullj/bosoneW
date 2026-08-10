@@ -78,11 +78,12 @@ const char* output_file{ DATA_DIR "/results/sigma_mass.txt" };
 
 int main(int argc, char** argv)
 {
+    gROOT->SetBatch(kTRUE);
+    ROOT::EnableThreadSafety();
+
     auto start{ std::chrono::high_resolution_clock::now() };
 
     TApplication app("app", &argc, argv);
-
-    gROOT->SetBatch(true);
 
     fs::create_directories("results");
 

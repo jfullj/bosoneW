@@ -88,6 +88,10 @@ PT_Generator::PT_Generator()
     }
 
     TH1D* h = dynamic_cast<TH1D*>(file.Get("h_pTW"));
+
+    if(double I{ h->Integral() }; I > 0)
+        h->Scale(1.0 / I);
+
     if(!h) throw std::runtime_error("impossibile creare l'istogramma della pT pdf");
 
     hist = std::unique_ptr<TH1D>(dynamic_cast<TH1D*>(h->Clone()));
