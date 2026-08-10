@@ -35,7 +35,7 @@ template<std::invocable Func>
 ROOT::Math::PxPyPzEVector generate_random_muon_p_rest_frame(double m_mass, double muon_mass, Func&& rand) {
     double p = m_mass / 2.0 - muon_mass * muon_mass / (2.0 * m_mass);
     
-    double cos_theta = 2.0 * rand() - 1.0;
+    double cos_theta = rand() * 2.0 - 1.0;
     double sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
     double phi = rand() * 2.0 * M_PI;
 
@@ -91,10 +91,10 @@ PT_Generator::PT_Generator()
 
     TH1D* h = dynamic_cast<TH1D*>(file.Get("h_pTW"));
 
-    if(double I{ h->Integral() }; I > 0)
+    if(double I{ h->Integral("width") }; I > 0)
         h->Scale(1.0 / I);
-
-    if(!h) throw std::runtime_error("impossibile creare l'istogramma della pT pdf");
+    
+        if(!h) throw std::runtime_error("impossibile creare l'istogramma della pT pdf");
 
     hist = std::unique_ptr<TH1D>(dynamic_cast<TH1D*>(h->Clone()));
     hist->SetDirectory(nullptr);
@@ -103,7 +103,7 @@ PT_Generator::PT_Generator()
 
 double PT_Generator::operator()()
 {
-    return hist->GetRandom(rng.get());
+    return hist->GetRandom(rng.get(), "width");
 }
 
 PT_Generator::PT_Generator(const PT_Generator& g)
