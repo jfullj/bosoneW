@@ -33,13 +33,15 @@ double generate_random_invariant_mass(double w_mass, double w_width, Func&& rand
 
 template<std::invocable Func>
 ROOT::Math::PxPyPzEVector generate_random_muon_p_rest_frame(double m_mass, double muon_mass, Func&& rand) {
-    double p = m_mass / 2.0  - muon_mass * muon_mass / (2.0 * m_mass);
-    double theta = rand() * M_PI;
+    double p = m_mass / 2.0 - muon_mass * muon_mass / (2.0 * m_mass);
+    
+    double cos_theta = 2.0 * rand() - 1.0;
+    double sin_theta = std::sqrt(1.0 - cos_theta * cos_theta);
     double phi = rand() * 2.0 * M_PI;
 
-    double px = p * std::sin(theta) * std::cos(phi);
-    double py = p * std::sin(theta) * std::sin(phi);
-    double pz = p * std::cos(theta);
+    double px = p * sin_theta * std::cos(phi);
+    double py = p * sin_theta * std::sin(phi);
+    double pz = p * cos_theta;
     double E = std::sqrt(p * p + muon_mass * muon_mass);
     return ROOT::Math::PxPyPzEVector(px, py, pz, E);
 }
@@ -66,7 +68,7 @@ double WDecaySampler::operator()() const
     double invariant_mass{ generate_random_invariant_mass(WMass, WWidth, rand) };
     auto muon_p{ generate_random_muon_p_rest_frame(invariant_mass, MUON_MASS, rand) };
 
-    ROOT::Math::PtEtaPhiEVector W_p{ pTW, eta, phi, invariant_mass };
+    ROOT::Math::PtEtaPhiMVector W_p{ pTW, eta, phi, invariant_mass };
 
     ROOT::Math::XYZVector beta{
         W_p.Px() / W_p.E(),

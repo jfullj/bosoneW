@@ -15,7 +15,8 @@ MassSensitivityAnalyzer::MassSensitivityAnalyzer(TH1D* h0, TH1D* h1, double delt
     double norm0 = h0->Integral();
     double norm1 = h1->Integral();
 
-    ratioHist->Scale( norm1/norm0 );
+    if(double I{ ratioHist->Integral() }; I > 0)
+        ratioHist->Scale(1.0 / I);
 
     double fisher = 0.0;
 

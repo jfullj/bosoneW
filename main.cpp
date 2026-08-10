@@ -2,6 +2,7 @@
 #include <TCanvas.h>
 #include <TROOT.h>
 #include <ROOT/RDataFrame.hxx>
+#include <TStyle.h>
 
 #include <SpectrumBuilder.hpp>
 #include <MassSensitivityAnalyzer.hpp>
@@ -78,6 +79,7 @@ const char* output_file{ DATA_DIR "/results/sigma_mass.txt" };
 
 int main(int argc, char** argv)
 {
+    gStyle->SetOptStat("eimr");
     gROOT->SetBatch(kTRUE);
     ROOT::EnableThreadSafety();
 
