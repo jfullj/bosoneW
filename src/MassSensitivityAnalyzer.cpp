@@ -12,24 +12,20 @@ MassSensitivityAnalyzer::MassSensitivityAnalyzer(TH1D* h0, TH1D* h1, double delt
     ratioHist->SetTitle("Template ratio; p_{T}^{#mu} [GeV];N(m_{W}+#Delta m)/N(m_{W})");
     ratioHist->Divide(h0);
     
-    double norm0 = h0->Integral("width");
-    double norm1 = h1->Integral("width");
+    double norm0 = h0->Integral();
+    double norm1 = h1->Integral();
 
     double fisher = 0.0;
 
     for (int i = 1; i <= h0->GetNbinsX(); ++i)
     {
-        double p0 = h0->GetBinContent(i) * h0->GetBinWidth(i) / norm0;
-        double p1 = h1->GetBinContent(i) * h1->GetBinWidth(i) / norm1;
-
-        if (p0 <= 0.0)
-            continue;
-
+        double p0 = h0->GetBinContent(i) / norm0;
+        double p1 = h1->GetBinContent(i) / norm1;
         double dpdm = (p1 - p0) / deltaMass;
 
         fisher += dpdm * dpdm / p0;
     }
-
+    
     sigmaMass = 1.0 / std::sqrt(h0->Integral() * fisher);
 }
 

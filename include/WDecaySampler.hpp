@@ -74,6 +74,8 @@ public:
     ~WDecaySampler() = default;
 
     static constexpr double MUON_MASS = 0.105658; // GeV/c^2
+    static constexpr double MIN_RAPIDITY = -3.0;
+    static constexpr double MAX_RAPIDITY = 3.0;
 private:
     double WMass, WWidth;
     std::vector<std::unique_ptr<Generator>> pT_local_generators;

@@ -225,12 +225,12 @@ int main(int argc, char** argv)
         throw std::runtime_error{ "Impossibile creare sigma_mass.txt" };
 
     output << "sigma_mass = " << sigma << " GeV\n\n"
-           << "Execution time = " << elapsed.count() / 1000. << " s\n";
+           << "execution time = " << elapsed.count() / 1000. << " s\n";
 
     output.close();
 
     std::cout << "sigma_mass = " << sigma << " GeV\n\n"
-              << "Execution time = " << elapsed.count() / 1000. << " s\n";
+              << "execution time = " << elapsed.count() / 1000. << " s\n";
 
     return 0;
 }

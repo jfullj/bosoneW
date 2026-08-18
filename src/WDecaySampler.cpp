@@ -39,8 +39,6 @@ double generate_random_gaussian(double mean, double sigma,Func&& rand)
 
 template<std::invocable Func>
 double generate_random_eta(Func&& rand) {
-    //TODO: definire una distribuzione effettiva
-
     double cos_theta = rand() * 2.0 - 1.0;
     return std::atanh(cos_theta);
 }
@@ -70,8 +68,26 @@ double generate_random_phi(Func&& rand) {
     return rand() * 2.0 * M_PI;
 } 
 
+template<std::invocable Func>
+double generate_random_rapidity(double min_rapidity, double max_rapidity, Func&& rand) {
+    return rand() * (max_rapidity - min_rapidity) + min_rapidity;
+} 
+
+
+ROOT::Math::PxPyPzEVector calculate_boson_p(double m_mass,double pTW, double rapidity, double phi)
+{
+    double mT = std::sqrt(m_mass * m_mass + pTW * pTW);
+    return {
+        pTW * std::cos(phi),
+        pTW * std::sin(phi),
+        mT * std::sinh(rapidity),
+        mT * std::cosh(rapidity)
+    };
+}
+
 WDecaySampler::Event WDecaySampler::operator()() const
 {
+    //generatore di numeri casuali per ogni singolo thread così da evitare race conditions
     thread_local auto rand = [](){
         thread_local std::mt19937 gen(
             std::random_device{}()
@@ -81,28 +97,36 @@ WDecaySampler::Event WDecaySampler::operator()() const
         return dist(gen);
     };
 
+    //variabili utili per il calcolo del quadrimpulso del bosone W nel laboratorio
     double pTW{ (*pT_local_generators[ThreadID::get()])() };
-
-    //eta ancora non ben specificato
-    double eta{ generate_random_eta(rand) };
-    double phi{ generate_random_phi(rand)};
     double invariant_mass{ generate_random_invariant_mass(WMass, WWidth, rand) };
-    auto muon_p{ generate_random_muon_p_rest_frame(invariant_mass, MUON_MASS, rand) };
+    double rapidity{ generate_random_rapidity(MIN_RAPIDITY, MAX_RAPIDITY, rand) };
+    double phi{ generate_random_phi(rand) };
 
-    auto neutrino_p{ - muon_p };
-
-    ROOT::Math::PtEtaPhiMVector W_p{ pTW, eta, phi, invariant_mass };
-
+    auto W_p{ calculate_boson_p(invariant_mass, pTW, rapidity, phi) };
     ROOT::Math::XYZVector beta{
         W_p.Px() / W_p.E(),
         W_p.Py() / W_p.E(),
         W_p.Pz() / W_p.E(),
     };
 
+    //momenti del muone e del neutrino nel sistema di riferimento a riposo del bosone W
+    auto muon_p{ generate_random_muon_p_rest_frame(invariant_mass, MUON_MASS, rand) };
+
+    ROOT::Math::PxPyPzEVector neutrino_p{ 
+        -muon_p.Px(),
+        -muon_p.Py(),
+        -muon_p.Pz(),
+        muon_p.P() //il neutrino ha massa trascurabile
+    };
+
+    //applico il boost alle due particelle per portarle nel sistema del laboratorio
     ROOT::Math::Boost boost(beta);
     muon_p = boost(muon_p);
     neutrino_p = boost(neutrino_p);
 
+
+    //calcolo della massa trasversa 
     double pt_mu = muon_p.Pt();
     double pt_nu = neutrino_p.Pt();
 
