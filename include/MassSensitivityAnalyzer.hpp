@@ -18,12 +18,14 @@ public:
     TH1D* getRatioHist() const;
     std::unique_ptr<TH1D> releaseRatioHist();
 
+    std::size_t get_selected_events_count() const;
     double sigma() const;
     ~MassSensitivityAnalyzer() = default;
 private:
 
     std::unique_ptr<TH1D> ratioHist;
     double sigmaMass;
+    std::size_t selectedEvents;
 };
 
 #endif //MASSSENSITIVITYANALYZER_HPP

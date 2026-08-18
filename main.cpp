@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <string>
 #include <chrono>
+#include <sstream>
 
 
 namespace fs = std::filesystem;
@@ -25,8 +26,16 @@ struct Parameters
     double W_MASS1;
     double W_WIDTH;
     std::size_t EVENT_COUNT;
+    bool USE_ACCELERATOR_DATA;
+    double INTEGRATED_LUMINOSITY;
+    double CROSS_SECTION;
 };
-
+std::size_t get_event_count(Parameters p)
+{
+    if(p.USE_ACCELERATOR_DATA == true)
+        return static_cast<std::size_t>(p.CROSS_SECTION * p.INTEGRATED_LUMINOSITY);
+    return p.EVENT_COUNT;
+}
 
 Parameters read_parameters(const std::string& filename)
 {
@@ -39,6 +48,7 @@ Parameters read_parameters(const std::string& filename)
 
     std::string parameter;
 
+    p.USE_ACCELERATOR_DATA = true;
     while (file >> parameter)
     {
         if (parameter == "W_MASS0")
@@ -48,7 +58,11 @@ Parameters read_parameters(const std::string& filename)
         else if (parameter == "W_WIDTH")
             file >> p.W_WIDTH;
         else if(parameter == "EVENT_COUNT")
-            file >> p.EVENT_COUNT;
+            file >> p.EVENT_COUNT, p.USE_ACCELERATOR_DATA = false;
+        else if(parameter == "INTEGRATED_LUMINOSITY")
+            file >> p.INTEGRATED_LUMINOSITY;
+        else if(parameter == "CROSS_SECTION")
+            file >> p.CROSS_SECTION;
         else
             throw std::runtime_error{ "Parametro sconosciuto: " + parameter };
     }
@@ -161,7 +175,6 @@ void save_histogram(TH1* hist, const std::string& filename, bool norm_hist = tru
 const char* input_file{ DATA_DIR "/input/parameters.txt" };
 const char* output_file{ DATA_DIR "/results/sigma_mass.txt" };
 
-
 int main(int argc, char** argv)
 {
     gStyle->SetOptStat("eimr");
@@ -176,7 +189,7 @@ int main(int argc, char** argv)
 
 
     auto params { read_parameters(input_file) };
-
+    auto EVENT_COUNT{ get_event_count(params) };
 
     double W_DELTA =
         params.W_MASS1 - params.W_MASS0;
@@ -199,8 +212,8 @@ int main(int argc, char** argv)
         pT_gen.get()
     };
 
-    auto pdf0{ SpectrumBuilder{sampler0, params.EVENT_COUNT}.releaseHist() };
-    auto pdf1{ SpectrumBuilder{sampler1, params.EVENT_COUNT}.releaseHist() };
+    auto pdf0{ SpectrumBuilder{sampler0, EVENT_COUNT}.releaseHist() };
+    auto pdf1{ SpectrumBuilder{sampler1, EVENT_COUNT}.releaseHist() };
 
     save_histogram(pdf0.get(), DATA_DIR "/results/pdf_Wmass0.png");
     save_histogram(pdf1.get(), DATA_DIR "/results/pdf_Wmass1.png");
@@ -220,17 +233,21 @@ int main(int argc, char** argv)
     auto end{ std::chrono::high_resolution_clock::now() };
     auto elapsed{ std::chrono::duration_cast<std::chrono::milliseconds>(end - start) };
 
+    std::ostringstream content;
+    content << "sigma_mass = " << sigma << " GeV\n\n"
+            << "generated events = " << EVENT_COUNT << "\n"
+            << "selected events = " << analyzer.get_selected_events_count() << "\n"
+            << "acceptance = " << (static_cast<double>(analyzer.get_selected_events_count()) / EVENT_COUNT) << "\n"
+            << "execution time = " << elapsed.count() / 1000. << " s\n";
+
+
     std::ofstream output{ output_file };
     if (!output)
         throw std::runtime_error{ "Impossibile creare sigma_mass.txt" };
 
-    output << "sigma_mass = " << sigma << " GeV\n\n"
-           << "execution time = " << elapsed.count() / 1000. << " s\n";
-
+    output << content.str();
     output.close();
 
-    std::cout << "sigma_mass = " << sigma << " GeV\n\n"
-              << "execution time = " << elapsed.count() / 1000. << " s\n";
-
+    std::cout << content.str();
     return 0;
 }
