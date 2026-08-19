@@ -86,6 +86,11 @@ TemplateComparison::TemplateComparison(TH1* nominal, TH1* shifted,const CanvasPr
 
     Error->SetMarkerStyle(20);
     Error->SetMarkerSize(0.65);
+
+    Nominal->SetStats(false);
+    Shifted->SetStats(false);
+    Ratio->SetStats(false);
+    Error->SetStats(false);
 }
 void TemplateComparison::save_as(const std::string& path)
 {
