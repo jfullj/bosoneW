@@ -77,6 +77,8 @@ TemplateComparison::TemplateComparison(TH1* nominal, TH1* shifted,const CanvasPr
     Ratio->GetYaxis()->SetLabelSize(CanvasProps.label_size * CanvasProps.pad_height_ratio);
     Ratio->GetYaxis()->SetTitleOffset(CanvasProps.title_offset_y / CanvasProps.pad_height_ratio);
 
+    Ratio->GetYaxis()->SetNdivisions(504, false);
+
     Error = std::unique_ptr<TH1D>(dynamic_cast<TH1D*>(Nominal->Clone()));
     Error->SetTitle("");
     Error->SetDirectory(nullptr);

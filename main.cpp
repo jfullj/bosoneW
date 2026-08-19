@@ -133,7 +133,7 @@ int main(int argc, char** argv)
         .title_size = 0.055,
         .label_size = 0.045,
         .title_offset_x = 1.20,
-        .title_offset_y = 0.60
+        .title_offset_y = 0.70
     });
 
     tc.save_as(output_hist_file);
