@@ -25,6 +25,16 @@ SpectrumBuilder::SpectrumBuilder(const WDecaySampler& sampler, std::size_t event
     }, "muon_pT" );
 
     hist = std::unique_ptr<TH1D>(dynamic_cast<TH1D*>(h_muon_pt->Clone("h_pt")));
+
+    double N = hist->Integral();
+    for (int i = 1; i <= hist->GetNbinsX(); ++i)
+    {
+        double content = hist->GetBinContent(i);
+        double p = content / N;
+        double error   = std::sqrt(N * p * (1 - p));
+
+        hist->SetBinError(i, error);
+    }
 }
 
 TH1D* SpectrumBuilder::getHist() const

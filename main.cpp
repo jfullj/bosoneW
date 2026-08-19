@@ -1,12 +1,10 @@
 #include <TApplication.h>
-#include <TCanvas.h>
 #include <TROOT.h>
 #include <ROOT/RDataFrame.hxx>
-#include <TStyle.h>
-#include <TPaveText.h>
 
 #include <SpectrumBuilder.hpp>
 #include <MassSensitivityAnalyzer.hpp>
+#include <HistUtils.hpp>
 
 #include <filesystem>
 #include <fstream>
@@ -70,132 +68,30 @@ Parameters read_parameters(const std::string& filename)
     return p;
 }
 
+const std::size_t CANVAS_WIDTH = 1280;
+const std::size_t CANVAS_HEIGHT = 720;
 
-const std::size_t HIST_WIDTH = 1280;
-const std::size_t HIST_HEIGHT = 720;
-
-void save_histogram(TH1* hist, const std::string& filename, bool norm_hist = true)
-{
-    if (!hist)
-        throw std::runtime_error{"Istogramma nullo"};
-
-    TCanvas canvas{
-        "canvas",
-        hist->GetTitle(),
-        HIST_WIDTH,
-        HIST_HEIGHT
-    };
-
-    hist->SetStats(kFALSE);
-    hist->Draw("HIST");
-
-    TPaveText stats(
-        0.65, 0.72,
-        0.88, 0.88,
-        "NDC"
-    );
-
-    stats.SetFillColor(0);
-    stats.SetBorderSize(1);
-    stats.SetTextAlign(12);
-    stats.SetTextFont(42);
-    stats.SetTextSize(0.025);
-
-    stats.AddText(Form("Entries    %.6g", hist->GetEntries()));
-    stats.AddText(Form("Mean       %.4g", hist->GetMean()));
-    stats.AddText(Form("Std Dev    %.4g", hist->GetStdDev()));
-    stats.AddText(Form("Integral   %.6g", hist->Integral("width")));
-
-    stats.Draw();
-
-    canvas.SaveAs(filename.c_str());
-
-    if(!norm_hist)
-        return;
-    // Istogramma normalizzato
-
-    std::unique_ptr<TH1> hist_norm{
-        dynamic_cast<TH1*>(hist->Clone(
-            (std::string{hist->GetName()} + "_norm").c_str()
-        ))
-    };
-
-    if (!hist_norm)
-        throw std::runtime_error{"Impossibile clonare l'istogramma"};
-
-    hist_norm->SetDirectory(nullptr);
-    hist_norm->SetStats(kFALSE);
-
-    const double integral = hist_norm->Integral("width");
-
-    if (integral > 0.0)
-        hist_norm->Scale(1.0 / integral);
-
-    TCanvas canvas_norm{
-        "canvas_norm",
-        hist_norm->GetTitle(),
-        HIST_WIDTH,
-        HIST_HEIGHT
-    };
-
-    hist_norm->Draw("HIST");
-
-    TPaveText stats_norm(
-        0.65, 0.72,
-        0.88, 0.88,
-        "NDC"
-    );
-
-    stats_norm.SetFillColor(0);
-    stats_norm.SetBorderSize(1);
-    stats_norm.SetTextAlign(12);
-    stats_norm.SetTextFont(42);
-    stats_norm.SetTextSize(0.025);
-
-    stats_norm.AddText(Form("Entries    %.6g", hist_norm->GetEntries()));
-    stats_norm.AddText(Form("Mean       %.4g", hist_norm->GetMean()));
-    stats_norm.AddText(Form("Std Dev    %.4g", hist_norm->GetStdDev()));
-    stats_norm.AddText(Form("Integral   %.6g", hist_norm->Integral("width")));
-
-    stats_norm.Draw();
-
-    // Costruisce filename_norm sostituendo l'estensione
-    std::string filename_norm = filename;
-
-    const std::size_t dot = filename_norm.find_last_of('.');
-
-    if (dot != std::string::npos)
-        filename_norm.insert(dot, "_norm");
-    else
-        filename_norm += "_norm";
-
-    canvas_norm.SaveAs(filename_norm.c_str());
-}
-
+const char* output_dir{ DATA_DIR "/results" };
 const char* input_file{ DATA_DIR "/input/parameters.txt" };
 const char* output_file{ DATA_DIR "/results/sigma_mass.txt" };
+const char* output_hist_file{ DATA_DIR "/results/template_comparison_plot.png" };
 
 int main(int argc, char** argv)
 {
-    gStyle->SetOptStat("eimr");
     gROOT->SetBatch(kTRUE);
     ROOT::EnableThreadSafety();
+    ROOT::EnableImplicitMT();
 
     auto start{ std::chrono::high_resolution_clock::now() };
 
     TApplication app("app", &argc, argv);
 
-    fs::create_directories(DATA_DIR "/results");
-
+    fs::create_directories(output_dir);
 
     auto params { read_parameters(input_file) };
     auto EVENT_COUNT{ get_event_count(params) };
+    double W_DELTA = params.W_MASS1 - params.W_MASS0;
 
-    double W_DELTA =
-        params.W_MASS1 - params.W_MASS0;
-
-
-    ROOT::EnableImplicitMT();
 
 
     auto pT_gen{ std::make_unique<PT_Generator>() };
@@ -215,20 +111,35 @@ int main(int argc, char** argv)
     auto pdf0{ SpectrumBuilder{sampler0, EVENT_COUNT}.releaseHist() };
     auto pdf1{ SpectrumBuilder{sampler1, EVENT_COUNT}.releaseHist() };
 
-    save_histogram(pdf0.get(), DATA_DIR "/results/pdf_Wmass0.png");
-    save_histogram(pdf1.get(), DATA_DIR "/results/pdf_Wmass1.png");
-
-
     MassSensitivityAnalyzer analyzer{
         pdf0.get(),
         pdf1.get(),
         W_DELTA
     };
 
+    TemplateComparison tc(pdf0.get(), pdf1.get(), {
+        .width = CANVAS_WIDTH,
+        .height = CANVAS_HEIGHT,
+        .nominal_mass = params.W_MASS0,
+        .shifted_mass = params.W_MASS1,
+        .pad_height_ratio = 2,
+        .gap = 0.02,
+        .nominal_hist_color = kBlue + 1,
+        .shifted_hist_color = kRed + 1,
+        .upper_x_axis_content = "",
+        .lower_x_axis_content = "p_{T}^{#mu} [GeV]",
+        .upper_y_axis_content = "pdf",
+        .lower_y_axis_content = "ratio",
+        .title_size = 0.055,
+        .label_size = 0.045,
+        .title_offset_x = 1.20,
+        .title_offset_y = 0.60
+    });
+
+    tc.save_as(output_hist_file);
+
     auto ratioHist{ analyzer.releaseRatioHist() };
     double sigma{ analyzer.sigma() };
-
-    save_histogram(ratioHist.get(), DATA_DIR "/results/template_ratio.png", false);
 
     auto end{ std::chrono::high_resolution_clock::now() };
     auto elapsed{ std::chrono::duration_cast<std::chrono::milliseconds>(end - start) };
@@ -237,7 +148,8 @@ int main(int argc, char** argv)
     content << "sigma_mass = " << sigma << " GeV\n\n"
             << "generated events = " << EVENT_COUNT << "\n"
             << "selected events = " << analyzer.get_selected_events_count() << "\n"
-            << "acceptance = " << (static_cast<double>(analyzer.get_selected_events_count()) / EVENT_COUNT) << "\n"
+            << "acceptance mass 0 = " << (static_cast<double>(pdf0->Integral()) / EVENT_COUNT) << "\n"
+            << "acceptance mass 1 = " << (static_cast<double>(pdf1->Integral()) / EVENT_COUNT) << "\n"
             << "execution time = " << elapsed.count() / 1000. << " s\n";
 
 
