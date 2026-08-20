@@ -39,6 +39,7 @@ public:
     PT_Generator& operator=(PT_Generator&&) = delete;
 
     virtual double operator()();
+    TH1* get_hist();
     virtual std::unique_ptr<Generator> clone() const;
     virtual ~PT_Generator() = default;
 

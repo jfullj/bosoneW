@@ -23,21 +23,6 @@ WDecaySampler::WDecaySampler(double WMass, double WWidth, const Generator * cons
 }
 
 template<std::invocable Func>
-double generate_random_gaussian(double mean, double sigma,Func&& rand)
-{
-    double u1 = rand();
-    double u2 = rand();
-
-    while (u1 <= 0.0)
-        u1 = rand();
-
-    double z = std::sqrt(-2.0 * std::log(u1))
-             * std::cos(2.0 * M_PI * u2);
-
-    return mean + sigma * z;
-}
-
-template<std::invocable Func>
 double generate_random_eta(Func&& rand) {
     double cos_theta = rand() * 2.0 - 1.0;
     return std::atanh(cos_theta);
@@ -176,4 +161,8 @@ std::unique_ptr<Generator> PT_Generator::clone() const
 {
     auto copy = std::unique_ptr<PT_Generator>{ new PT_Generator{ *this } };
     return copy;  
+}
+TH1* PT_Generator::get_hist()
+{
+    return hist.get();
 }

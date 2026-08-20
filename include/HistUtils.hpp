@@ -30,7 +30,7 @@ public:
         double title_offset_y;
     };
 
-    TemplateComparison(TH1* nominal, TH1* shifted,const CanvasPropeties& props);
+    TemplateComparison(TH1* nominal, TH1* shifted, double sigmaW, const CanvasPropeties& props);
 
     TemplateComparison(const TemplateComparison&) = delete;
     TemplateComparison& operator=(const TemplateComparison&) = delete;
@@ -43,8 +43,25 @@ public:
     ~TemplateComparison() = default;
 private:
     std::unique_ptr<TH1> Nominal, Shifted, Ratio, Error;
-    
     CanvasPropeties CanvasProps;
+    double SigmaW;
 };
+
+
+struct SaveHistParams
+{
+    std::size_t width;
+    std::size_t height; 
+    std::string name;
+    std::string x_axis_content;
+    std::string y_axis_content;
+    int color;
+    double title_size;
+    double label_size;
+    double title_offset_x;
+    double title_offset_y;
+    std::string draw_settings;
+};
+void save_histogram(TH1* hist, const std::string& path, const SaveHistParams& params);
 
 #endif //HISTUTILS_HPP

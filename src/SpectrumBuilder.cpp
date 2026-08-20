@@ -1,6 +1,5 @@
-#include "SpectrumBuilder.hpp"
+#include <SpectrumBuilder.hpp>
 #include <ROOT/RDataFrame.hxx>
-
 SpectrumBuilder::SpectrumBuilder(const WDecaySampler& sampler, std::size_t event_count)
 : event_count{ event_count }
 {

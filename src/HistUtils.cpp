@@ -3,9 +3,11 @@
 #include <TLegend.h>
 #include <TLine.h>
 
+#include <format>
 
-TemplateComparison::TemplateComparison(TH1* nominal, TH1* shifted,const CanvasPropeties& props)
-: CanvasProps{ props }
+
+TemplateComparison::TemplateComparison(TH1* nominal, TH1* shifted, double sigmaW, const CanvasPropeties& props)
+: CanvasProps{ props }, SigmaW{ sigmaW }
 {
     if (!nominal || !shifted)
         throw std::runtime_error("Null histogram");
@@ -162,13 +164,13 @@ void TemplateComparison::save_as(const std::string& path)
 
     legend.AddEntry(
         Nominal.get(),
-        Form("m_{W} = %.3f GeV", CanvasProps.nominal_mass),
+        std::format("m_{{W}} = {:.3f} GeV", CanvasProps.nominal_mass).c_str(),
         "l"
     );
 
     legend.AddEntry(
         Shifted.get(),
-        Form("m_{W} = %.3f GeV", CanvasProps.nominal_mass),
+        std::format("m_{{W}} = {:.3f} GeV", CanvasProps.shifted_mass).c_str(),
         "l"
     );
 
@@ -177,6 +179,12 @@ void TemplateComparison::save_as(const std::string& path)
         "MC statistical uncertainty",
         "lep"
     );
+    legend.AddEntry(
+        (TObject*)nullptr,
+        std::format("#sigma_{{W}} = {:.2f} MeV", SigmaW * 1000.).c_str(),
+        ""    
+    );
+    
 
     legend.Draw();
 
@@ -201,5 +209,43 @@ void TemplateComparison::save_as(const std::string& path)
     unity.Draw("SAME");
 
     canvas.cd();
+    canvas.SaveAs(path.c_str());
+}
+
+void save_histogram(TH1* hist, const std::string& path, const SaveHistParams& params)
+{
+    auto copy{ std::unique_ptr<TH1>(dynamic_cast<TH1*>(hist->Clone())) };
+    copy->SetTitle(params.name.c_str());
+
+    TCanvas canvas{
+        "histogram", "", 
+        static_cast<Int_t>(params.width),
+        static_cast<Int_t>(params.height)
+    };
+
+    canvas.cd();
+
+    copy->GetXaxis()->SetTitle(params.x_axis_content.c_str());
+    copy->GetYaxis()->SetTitle(params.y_axis_content.c_str());
+    
+    copy->GetXaxis()->CenterTitle();
+    copy->GetYaxis()->CenterTitle();
+
+
+    copy->GetXaxis()->SetTitleSize(params.title_size);
+    copy->GetXaxis()->SetLabelSize(params.label_size);
+    copy->GetXaxis()->SetTitleOffset(params.title_offset_x);
+    
+    copy->GetYaxis()->SetTitleSize(params.title_size);
+    copy->GetYaxis()->SetLabelSize(params.label_size);
+    copy->GetYaxis()->SetTitleOffset(params.title_offset_y);
+
+    copy->SetLineColor(params.color);
+    copy->SetLineWidth(2);
+    copy->SetFillStyle(0);
+
+    copy->SetStats(false);
+    copy->Draw(params.draw_settings.c_str());
+
     canvas.SaveAs(path.c_str());
 }

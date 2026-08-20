@@ -3,7 +3,7 @@
 #include <ROOT/RDataFrame.hxx>
 
 #include <SpectrumBuilder.hpp>
-#include <MassSensitivityAnalyzer.hpp>
+#include <FisherInformation.hpp>
 #include <HistUtils.hpp>
 
 #include <filesystem>
@@ -75,6 +75,7 @@ const char* output_dir{ DATA_DIR "/results" };
 const char* input_file{ DATA_DIR "/input/parameters.txt" };
 const char* output_file{ DATA_DIR "/results/sigma_mass.txt" };
 const char* output_hist_file{ DATA_DIR "/results/template_comparison_plot.png" };
+const char* pT_dist_dir{ DATA_DIR "/results/pT_dist.png" };
 
 int main(int argc, char** argv)
 {
@@ -96,6 +97,20 @@ int main(int argc, char** argv)
 
     auto pT_gen{ std::make_unique<PT_Generator>() };
 
+    save_histogram(pT_gen->get_hist(), pT_dist_dir, {
+        .width = CANVAS_WIDTH,
+        .height = CANVAS_HEIGHT,
+        .name = "pTW distribution",
+        .x_axis_content = "p^{T}_{W} [GeV]",
+        .y_axis_content = "pmf",
+        .color = kBlack,
+        .title_size = 0.055,
+        .label_size = 0.045,
+        .title_offset_x = 0.80,
+        .title_offset_y = 0.80,
+        .draw_settings = ""
+    });
+
 
     WDecaySampler sampler0{
         params.W_MASS0,
@@ -111,13 +126,16 @@ int main(int argc, char** argv)
     auto pdf0{ SpectrumBuilder{sampler0, EVENT_COUNT}.releaseHist() };
     auto pdf1{ SpectrumBuilder{sampler1, EVENT_COUNT}.releaseHist() };
 
-    MassSensitivityAnalyzer analyzer{
+    FisherInformation fi{
         pdf0.get(),
         pdf1.get(),
         W_DELTA
     };
 
-    TemplateComparison tc(pdf0.get(), pdf1.get(), {
+    auto ratioHist{ fi.releaseRatioHist() };
+    double sigma{ fi.sigma() };
+
+    TemplateComparison tc(pdf0.get(), pdf1.get(), sigma, {
         .width = CANVAS_WIDTH,
         .height = CANVAS_HEIGHT,
         .nominal_mass = params.W_MASS0,
@@ -128,7 +146,7 @@ int main(int argc, char** argv)
         .shifted_hist_color = kRed + 1,
         .upper_x_axis_content = "",
         .lower_x_axis_content = "p_{T}^{#mu} [GeV]",
-        .upper_y_axis_content = "pdf",
+        .upper_y_axis_content = "events / N",
         .lower_y_axis_content = "ratio",
         .title_size = 0.055,
         .label_size = 0.045,
@@ -138,8 +156,7 @@ int main(int argc, char** argv)
 
     tc.save_as(output_hist_file);
 
-    auto ratioHist{ analyzer.releaseRatioHist() };
-    double sigma{ analyzer.sigma() };
+    
 
     auto end{ std::chrono::high_resolution_clock::now() };
     auto elapsed{ std::chrono::duration_cast<std::chrono::milliseconds>(end - start) };
@@ -147,7 +164,7 @@ int main(int argc, char** argv)
     std::ostringstream content;
     content << "sigma_mass = " << sigma << " GeV\n\n"
             << "generated events = " << EVENT_COUNT << "\n"
-            << "selected events = " << analyzer.get_selected_events_count() << "\n"
+            << "selected events = " << fi.get_selected_events_count() << "\n"
             << "acceptance mass 0 = " << (static_cast<double>(pdf0->Integral()) / EVENT_COUNT) << "\n"
             << "acceptance mass 1 = " << (static_cast<double>(pdf1->Integral()) / EVENT_COUNT) << "\n"
             << "execution time = " << elapsed.count() / 1000. << " s\n";

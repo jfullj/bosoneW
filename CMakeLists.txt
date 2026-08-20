@@ -28,7 +28,7 @@ add_executable(bosoneW
     main.cpp
     src/WDecaySampler.cpp
     src/SpectrumBuilder.cpp
-    src/MassSensitivityAnalyzer.cpp
+    src/FisherInformation.cpp
     src/HistUtils.cpp
 )
 

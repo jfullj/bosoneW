@@ -1,8 +1,8 @@
-#include <MassSensitivityAnalyzer.hpp>
+#include <FisherInformation.hpp>
 #include <cmath>
 #include <iostream>
 
-MassSensitivityAnalyzer::MassSensitivityAnalyzer(TH1D* h0, TH1D* h1, double deltaMass)
+FisherInformation::FisherInformation(TH1D* h0, TH1D* h1, double deltaMass)
 {
     ratioHist = std::unique_ptr<TH1D>(
         dynamic_cast<TH1D*>(h1->Clone("h_ratio"))
@@ -28,21 +28,21 @@ MassSensitivityAnalyzer::MassSensitivityAnalyzer(TH1D* h0, TH1D* h1, double delt
     selectedEvents = h0->Integral();
     sigmaMass = 1.0 / std::sqrt(selectedEvents * fisher);
 }
-std::size_t MassSensitivityAnalyzer::get_selected_events_count() const
+std::size_t FisherInformation::get_selected_events_count() const
 {
     return selectedEvents;
 }
 
-TH1D* MassSensitivityAnalyzer::getRatioHist() const
+TH1D* FisherInformation::getRatioHist() const
 {
     return ratioHist.get();
 }
-std::unique_ptr<TH1D> MassSensitivityAnalyzer::releaseRatioHist()
+std::unique_ptr<TH1D> FisherInformation::releaseRatioHist()
 {
     return std::move(ratioHist);
 }
 
-double MassSensitivityAnalyzer::sigma() const
+double FisherInformation::sigma() const
 {
     return sigmaMass;
 }
