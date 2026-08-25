@@ -167,7 +167,7 @@ int main(int argc, char** argv)
         WDecaySampler sampler{ w_gen.get() };
         auto pdf{ SpectrumBuilder{sampler, EVENT_COUNT}.releaseHist() };
 
-        save_plot(pdf.get(), DATA_DIR "/resuls/pTW const.png", SavePlotParams{
+        save_plot(pdf.get(), DATA_DIR "/results/pTW const.png", SavePlotParams{
             .width = CANVAS_WIDTH,
             .height = CANVAS_HEIGHT,
             .name = "",
