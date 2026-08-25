@@ -18,6 +18,7 @@ find_package(ROOT REQUIRED COMPONENTS
     Tree 
     TreePlayer 
     MathCore
+    MathMore
     Imt 
     ROOTDataFrame 
     Physics)
@@ -30,6 +31,7 @@ add_executable(bosoneW
     src/SpectrumBuilder.cpp
     src/FisherInformation.cpp
     src/HistUtils.cpp
+    src/Generator.cpp
 )
 
 
@@ -45,6 +47,7 @@ target_link_libraries(bosoneW PRIVATE
     ROOT::Imt
     ROOT::ROOTDataFrame
     ROOT::Physics
+    ROOT::MathMore
 )
 
 target_compile_definitions(bosoneW PRIVATE

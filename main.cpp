@@ -17,7 +17,6 @@
 
 namespace fs = std::filesystem;
 
-
 struct Parameters
 {
     double W_MASS0;
@@ -93,11 +92,9 @@ int main(int argc, char** argv)
     auto EVENT_COUNT{ get_event_count(params) };
     double W_DELTA = params.W_MASS1 - params.W_MASS0;
 
-
-
     auto pT_gen{ std::make_unique<PT_Generator>() };
 
-    save_histogram(pT_gen->get_hist(), pT_dist_dir, {
+    save_plot(pT_gen->get_hist(), pT_dist_dir, SavePlotParams{
         .width = CANVAS_WIDTH,
         .height = CANVAS_HEIGHT,
         .name = "pTW distribution",
@@ -111,17 +108,20 @@ int main(int argc, char** argv)
         .draw_settings = ""
     });
 
-
-    WDecaySampler sampler0{
+    auto w_gen0{ std::make_unique<W_Generator>(
         params.W_MASS0,
         params.W_WIDTH,
         pT_gen.get()
-    };
-    WDecaySampler sampler1{
+    )};
+
+    auto w_gen1{ std::make_unique<W_Generator>(
         params.W_MASS1,
         params.W_WIDTH,
         pT_gen.get()
-    };
+    )};
+
+    WDecaySampler sampler0{ w_gen0.get() };
+    WDecaySampler sampler1{ w_gen1.get() };
 
     auto pdf0{ SpectrumBuilder{sampler0, EVENT_COUNT}.releaseHist() };
     auto pdf1{ SpectrumBuilder{sampler1, EVENT_COUNT}.releaseHist() };
@@ -147,15 +147,39 @@ int main(int argc, char** argv)
         .upper_x_axis_content = "",
         .lower_x_axis_content = "p_{T}^{#mu} [GeV]",
         .upper_y_axis_content = "events / N",
-        .lower_y_axis_content = "ratio",
+        .lower_y_axis_content = "#frac{f_{m+#Deltam}}{f_{m}}",
         .title_size = 0.055,
         .label_size = 0.045,
         .title_offset_x = 1.20,
-        .title_offset_y = 0.70
+        .title_offset_y = 1.20
     });
 
     tc.save_as(output_hist_file);
 
+    {
+        auto pT_gen{ std::make_unique<PT_Delta_Generator>(8) };
+        auto w_gen{ std::make_unique<W_Generator>(
+            params.W_MASS0,
+            params.W_WIDTH,
+            pT_gen.get()
+        )}; 
+
+        WDecaySampler sampler{ w_gen.get() };
+        auto pdf{ SpectrumBuilder{sampler, EVENT_COUNT}.releaseHist() };
+
+        save_plot(pdf.get(), DATA_DIR "/resuls/pTW const.png", SavePlotParams{
+            .width = CANVAS_WIDTH,
+            .height = CANVAS_HEIGHT,
+            .name = "",
+            .x_axis_content = "p_{T}^{#mu} [GeV]",
+            .y_axis_content = "pdf",
+            .color = kBlue + 1,
+            .title_size = 0.055,
+            .label_size = 0.045,
+            .title_offset_x = 1.20,
+            .title_offset_y = 1.20
+        });
+    }
     
 
     auto end{ std::chrono::high_resolution_clock::now() };

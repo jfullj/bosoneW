@@ -4,9 +4,12 @@
 #include <TH1.h>
 #include <TStyle.h>
 #include <TPaveText.h>
+#include <TCanvas.h>
+
 
 #include <memory>
 #include <string>
+#include <concepts>
 
 class TemplateComparison
 {
@@ -48,7 +51,7 @@ private:
 };
 
 
-struct SaveHistParams
+struct SavePlotParams
 {
     std::size_t width;
     std::size_t height; 
@@ -62,6 +65,73 @@ struct SaveHistParams
     double title_offset_y;
     std::string draw_settings;
 };
-void save_histogram(TH1* hist, const std::string& path, const SaveHistParams& params);
+
+namespace save_plot_details
+{
+    template<typename Drawable>
+    auto init_copy(Drawable* d, const SavePlotParams& params)
+    {
+        auto copy{ std::unique_ptr<Drawable>(dynamic_cast<Drawable*>(d->Clone())) };
+        copy->SetTitle(params.name.c_str());
+
+        copy->GetXaxis()->SetTitle(params.x_axis_content.c_str());
+        copy->GetYaxis()->SetTitle(params.y_axis_content.c_str());
+    
+        copy->GetXaxis()->CenterTitle();
+        copy->GetYaxis()->CenterTitle();
+
+
+        copy->GetXaxis()->SetTitleSize(params.title_size);
+        copy->GetXaxis()->SetLabelSize(params.label_size);
+        copy->GetXaxis()->SetTitleOffset(params.title_offset_x);
+    
+        copy->GetYaxis()->SetTitleSize(params.title_size);
+        copy->GetYaxis()->SetLabelSize(params.label_size);
+        copy->GetYaxis()->SetTitleOffset(params.title_offset_y);
+
+        copy->SetLineColor(params.color);
+        copy->SetLineWidth(2);
+        copy->SetFillStyle(0);
+        
+        return copy;
+    }
+}
+
+template<std::derived_from<TObject> Drawable>
+void save_plot(Drawable* d, const std::string& path, const SavePlotParams& params)
+{
+    auto copy{ save_plot_details::init_copy(d, params) };
+    TCanvas canvas{
+        "", "", 
+        static_cast<Int_t>(params.width),
+        static_cast<Int_t>(params.height)
+    };
+
+    canvas.cd();
+    
+    //copy->SetStats(false);
+    copy->Draw(params.draw_settings.c_str());
+
+    canvas.SaveAs(path.c_str());
+}
+
+template<std::derived_from<TObject> Drawable, std::invocable<Drawable*> F>
+void save_plot(Drawable* d, const std::string& path, const SavePlotParams& params, F&& f)
+{
+    auto copy{ save_plot_details::init_copy(d, params) };
+    TCanvas canvas{
+        "", "", 
+        static_cast<Int_t>(params.width),
+        static_cast<Int_t>(params.height)
+    };
+
+    canvas.cd();
+    
+    copy->Draw(params.draw_settings.c_str());
+
+    f(copy.get());
+
+    canvas.SaveAs(path.c_str());
+}
 
 #endif //HISTUTILS_HPP

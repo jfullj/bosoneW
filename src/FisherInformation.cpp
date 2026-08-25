@@ -7,9 +7,6 @@ FisherInformation::FisherInformation(TH1D* h0, TH1D* h1, double deltaMass)
     ratioHist = std::unique_ptr<TH1D>(
         dynamic_cast<TH1D*>(h1->Clone("h_ratio"))
     );
-    
-
-    ratioHist->SetTitle("Template ratio; p_{T}^{#mu} [GeV];N(m_{W}+#Delta m)/N(m_{W})");
     ratioHist->Divide(h0);
     
     double norm0 = h0->Integral("width");
