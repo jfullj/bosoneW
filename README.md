@@ -6,7 +6,7 @@ $$
 W \rightarrow \mu\nu.
 $$
 
-![Distribuzione del momento trasverso del muone](results/pT_muon.png)
+<img src="results/template_comparison_plot.png" alt="Distribuzione del momento trasverso del muone" width="700">
 
 ## Descrizione
 
