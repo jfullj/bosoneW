@@ -1,7 +1,7 @@
-sigma_mass = 0.0014596 GeV
+sigma_mass = 0.00141115 GeV
 
 generated events = 327600000
-selected events = 179772829
-acceptance mass 0 = 0.548757
-acceptance mass 1 = 0.549281
-execution time = 87.428 s
+selected events = 179785610
+acceptance mass 0 = 0.548796
+acceptance mass 1 = 0.54925
+execution time = 77.918 s

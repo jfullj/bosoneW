@@ -6,9 +6,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-g -fsanitize=address")
-set(CMAKE_EXE_LINKER_FLAGS_DEBUG "-fsanitize=address")
-
 find_package(ROOT REQUIRED COMPONENTS 
     Core 
     RIO 
@@ -28,10 +25,10 @@ include(${ROOT_USE_FILE})
 add_executable(bosoneW
     main.cpp
     src/WDecaySampler.cpp
-    src/SpectrumBuilder.cpp
     src/FisherInformation.cpp
     src/HistUtils.cpp
     src/Generator.cpp
+    include/Spectrum.hpp
 )
 
 

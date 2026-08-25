@@ -2,7 +2,7 @@
 #include <TROOT.h>
 #include <ROOT/RDataFrame.hxx>
 
-#include <SpectrumBuilder.hpp>
+#include <Spectrum.hpp>
 #include <FisherInformation.hpp>
 #include <HistUtils.hpp>
 
@@ -123,8 +123,8 @@ int main(int argc, char** argv)
     WDecaySampler sampler0{ w_gen0.get() };
     WDecaySampler sampler1{ w_gen1.get() };
 
-    auto pdf0{ SpectrumBuilder{sampler0, EVENT_COUNT}.releaseHist() };
-    auto pdf1{ SpectrumBuilder{sampler1, EVENT_COUNT}.releaseHist() };
+    auto pdf0{ Spectrum{sampler0, EVENT_COUNT}.releaseHist() };
+    auto pdf1{ Spectrum{sampler1, EVENT_COUNT}.releaseHist() };
 
     FisherInformation fi{
         pdf0.get(),
@@ -165,9 +165,18 @@ int main(int argc, char** argv)
         )}; 
 
         WDecaySampler sampler{ w_gen.get() };
-        auto pdf{ SpectrumBuilder{sampler, EVENT_COUNT}.releaseHist() };
 
-        save_plot(pdf.get(), DATA_DIR "/results/pTW const.png", SavePlotParams{
+        Spectrum spectrum{
+            sampler,
+            EVENT_COUNT, 
+            Binning::Parameters{
+                .bin_count = 100,
+                .min = 0,
+                .max = 100
+            }, Acceptance::all
+        };
+
+        save_plot(spectrum.getHist(), DATA_DIR "/results/pTW const.png", SavePlotParams{
             .width = CANVAS_WIDTH,
             .height = CANVAS_HEIGHT,
             .name = "",
@@ -177,7 +186,8 @@ int main(int argc, char** argv)
             .title_size = 0.055,
             .label_size = 0.045,
             .title_offset_x = 1.20,
-            .title_offset_y = 1.20
+            .title_offset_y = 1.20,
+            .draw_settings = "HIST SAME"
         });
     }
     
