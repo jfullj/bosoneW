@@ -43,7 +43,7 @@ namespace Binning
 
     struct Parameters
     {
-        std::size_t bin_count; 
+        int bin_count; 
         double min,
             max;
     };

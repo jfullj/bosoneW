@@ -176,6 +176,9 @@ int main(int argc, char** argv)
             }, Acceptance::all
         };
 
+        auto pdf{ spectrum.releaseHist() };
+        pdf->Scale(1 / pdf->Integral("width"));
+
         save_plot(spectrum.getHist(), DATA_DIR "/results/pTW const.png", SavePlotParams{
             .width = CANVAS_WIDTH,
             .height = CANVAS_HEIGHT,
@@ -185,8 +188,8 @@ int main(int argc, char** argv)
             .color = kBlue + 1,
             .title_size = 0.055,
             .label_size = 0.045,
-            .title_offset_x = 1.20,
-            .title_offset_y = 1.20,
+            .title_offset_x = 0.80,
+            .title_offset_y = 0.60,
             .draw_settings = "HIST SAME"
         });
     }
