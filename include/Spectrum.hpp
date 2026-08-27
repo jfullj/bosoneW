@@ -8,20 +8,20 @@
 
 namespace Acceptance
 {
-    constexpr double MIN_MUON_PT = 26.0; // GeV/c
-    constexpr double MAX_MUON_PT = 56.0; // GeV/c
-    constexpr double MIN_ETA = -2.4;
-    constexpr double MAX_ETA = 2.4;
-    constexpr double MIN_TRANSVERSE_MASS = 40; //GeV/x
+    inline constexpr double MIN_MUON_PT = 26.0; // GeV/c
+    inline constexpr double MAX_MUON_PT = 56.0; // GeV/c
+    inline constexpr double MIN_ETA = -2.4;
+    inline constexpr double MAX_ETA = 2.4;
+    inline constexpr double MIN_TRANSVERSE_MASS = 40; //GeV/x
 
-    bool standard(WDecaySampler::Event const& e)
+    inline bool standard(WDecaySampler::Event const& e)
     {
         return (e.muon_pT > MIN_MUON_PT && e.muon_pT < MAX_MUON_PT) &&
                (e.muon_eta > MIN_ETA && e.muon_eta < MAX_ETA) &&
                 e.mT > MIN_TRANSVERSE_MASS;
     }
 
-    bool all(WDecaySampler::Event const& e)
+    inline bool all(WDecaySampler::Event const& e)
     {
         return true;
     }
@@ -37,9 +37,7 @@ namespace Acceptance
 
 namespace Binning
 {
-    constexpr std::size_t BIN_COUNT = 30;
-    constexpr double MIN_MUON_PT = 26.0; // GeV/c
-    constexpr double MAX_MUON_PT = 56.0; // GeV/c
+    inline constexpr std::size_t BIN_COUNT = 30;
 
     struct Parameters
     {
@@ -48,10 +46,10 @@ namespace Binning
             max;
     };
 
-    constexpr Parameters standard{
+    inline constexpr Parameters standard{
         .bin_count = BIN_COUNT,
-        .min = MIN_MUON_PT,
-        .max = MAX_MUON_PT
+        .min = Acceptance::MIN_MUON_PT,
+        .max = Acceptance::MAX_MUON_PT
     };
 }
 
@@ -93,16 +91,27 @@ public:
     Spectrum(const WDecaySampler& sampler, std::size_t event_count, Binning::Parameters const& params)
     : Spectrum(sampler, event_count, params, Acceptance::standard) {}
 
-    Spectrum(const Spectrum&) = delete;
-    Spectrum& operator=(const Spectrum&) = delete;
+    Spectrum(const Spectrum& other) : hist(std::unique_ptr<TH1D>(dynamic_cast<TH1D*>(other.hist->Clone()))){}
+
+    Spectrum& operator=(const Spectrum& other)
+    {
+        if (this != &other)
+        {
+            hist.reset(dynamic_cast<TH1D*>(other.hist->Clone()));
+        }
+
+        return *this;
+    }
 
     Spectrum(Spectrum&&) = default;
     Spectrum& operator=(Spectrum&&) = default;    
     
     ~Spectrum() = default;
 
-    TH1D* getHist() const { return hist.get(); }
-    std::unique_ptr<TH1D> releaseHist() { return std::move(hist); }
+    TH1D* get_hist() const { return hist.get(); }
+    std::unique_ptr<TH1D> release_hist() { return std::move(hist); }
+    
+    void normalize() { hist->Scale(1. / hist->Integral("width")); }
 private:
 
     std::unique_ptr<TH1D> hist;

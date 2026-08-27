@@ -109,7 +109,7 @@ void save_plot(Drawable* d, const std::string& path, const SavePlotParams& param
 
     canvas.cd();
     
-    //copy->SetStats(false);
+    copy->SetStats(false);
     copy->Draw(params.draw_settings.c_str());
 
     canvas.SaveAs(path.c_str());

@@ -28,6 +28,8 @@ add_executable(bosoneW
     src/FisherInformation.cpp
     src/HistUtils.cpp
     src/Generator.cpp
+    src/WidthSensitivity.cpp
+    src/MassSensitivity.cpp
     include/Spectrum.hpp
 )
 

@@ -2,18 +2,15 @@
 #include <TROOT.h>
 #include <ROOT/RDataFrame.hxx>
 
-#include <Spectrum.hpp>
-#include <FisherInformation.hpp>
-#include <HistUtils.hpp>
-
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
 #include <chrono>
-#include <sstream>
 
+#include <MassSensitivity.hpp>
+#include <WidthSensitivity.hpp>
 
 namespace fs = std::filesystem;
 
@@ -67,14 +64,9 @@ Parameters read_parameters(const std::string& filename)
     return p;
 }
 
-const std::size_t CANVAS_WIDTH = 1280;
-const std::size_t CANVAS_HEIGHT = 720;
-
-const char* output_dir{ DATA_DIR "/results" };
 const char* input_file{ DATA_DIR "/input/parameters.txt" };
-const char* output_file{ DATA_DIR "/results/sigma_mass.txt" };
-const char* output_hist_file{ DATA_DIR "/results/template_comparison_plot.png" };
-const char* pT_dist_dir{ DATA_DIR "/results/pT_dist.png" };
+const char* output_dir{ DATA_DIR "/results" };
+
 
 int main(int argc, char** argv)
 {
@@ -89,131 +81,27 @@ int main(int argc, char** argv)
     fs::create_directories(output_dir);
 
     auto params { read_parameters(input_file) };
-    auto EVENT_COUNT{ get_event_count(params) };
-    double W_DELTA = params.W_MASS1 - params.W_MASS0;
-
-    auto pT_gen{ std::make_unique<PT_Generator>() };
-
-    save_plot(pT_gen->get_hist(), pT_dist_dir, SavePlotParams{
-        .width = CANVAS_WIDTH,
-        .height = CANVAS_HEIGHT,
-        .name = "pTW distribution",
-        .x_axis_content = "p^{T}_{W} [GeV]",
-        .y_axis_content = "pmf",
-        .color = kBlack,
-        .title_size = 0.055,
-        .label_size = 0.045,
-        .title_offset_x = 0.80,
-        .title_offset_y = 0.80,
-        .draw_settings = ""
-    });
-
-    auto w_gen0{ std::make_unique<W_Generator>(
-        params.W_MASS0,
-        params.W_WIDTH,
-        pT_gen.get()
-    )};
-
-    auto w_gen1{ std::make_unique<W_Generator>(
-        params.W_MASS1,
-        params.W_WIDTH,
-        pT_gen.get()
-    )};
-
-    WDecaySampler sampler0{ w_gen0.get() };
-    WDecaySampler sampler1{ w_gen1.get() };
-
-    auto pdf0{ Spectrum{sampler0, EVENT_COUNT}.releaseHist() };
-    auto pdf1{ Spectrum{sampler1, EVENT_COUNT}.releaseHist() };
-
-    FisherInformation fi{
-        pdf0.get(),
-        pdf1.get(),
-        W_DELTA
-    };
-
-    auto ratioHist{ fi.releaseRatioHist() };
-    double sigma{ fi.sigma() };
-
-    TemplateComparison tc(pdf0.get(), pdf1.get(), sigma, {
-        .width = CANVAS_WIDTH,
-        .height = CANVAS_HEIGHT,
-        .nominal_mass = params.W_MASS0,
-        .shifted_mass = params.W_MASS1,
-        .pad_height_ratio = 2,
-        .gap = 0.02,
-        .nominal_hist_color = kBlue + 1,
-        .shifted_hist_color = kRed + 1,
-        .upper_x_axis_content = "",
-        .lower_x_axis_content = "p_{T}^{#mu} [GeV]",
-        .upper_y_axis_content = "events / N",
-        .lower_y_axis_content = "#frac{f_{m+#Deltam}}{f_{m}}",
-        .title_size = 0.055,
-        .label_size = 0.045,
-        .title_offset_x = 1.20,
-        .title_offset_y = 1.20
-    });
-
-    tc.save_as(output_hist_file);
+    auto EVENT_COUNT{ get_event_count(params) };    
+    
+    //Mass::junk(params.W_MASS0, params.W_MASS1, params.W_WIDTH, EVENT_COUNT);
 
     {
-        auto pT_gen{ std::make_unique<PT_Delta_Generator>(8) };
+        auto pT_gen{ std::make_unique<PT_Generator>() };
+        
+
         auto w_gen{ std::make_unique<W_Generator>(
             params.W_MASS0,
             params.W_WIDTH,
             pT_gen.get()
-        )}; 
-
+        )};
         WDecaySampler sampler{ w_gen.get() };
+        Spectrum pdf{sampler, EVENT_COUNT};
 
-        Spectrum spectrum{
-            sampler,
-            EVENT_COUNT, 
-            Binning::Parameters{
-                .bin_count = 100,
-                .min = 0,
-                .max = 100
-            }, Acceptance::all
-        };
-
-        auto pdf{ spectrum.releaseHist() };
-        pdf->Scale(1 / pdf->Integral("width"));
-
-        save_plot(spectrum.getHist(), DATA_DIR "/results/pTW const.png", SavePlotParams{
-            .width = CANVAS_WIDTH,
-            .height = CANVAS_HEIGHT,
-            .name = "",
-            .x_axis_content = "p_{T}^{#mu} [GeV]",
-            .y_axis_content = "pdf",
-            .color = kBlue + 1,
-            .title_size = 0.055,
-            .label_size = 0.045,
-            .title_offset_x = 0.80,
-            .title_offset_y = 0.60,
-            .draw_settings = "HIST SAME"
-        });
+        Width::find_best_delta_width(params.W_MASS0, params.W_WIDTH, EVENT_COUNT, 25, pdf);
     }
-    
 
     auto end{ std::chrono::high_resolution_clock::now() };
     auto elapsed{ std::chrono::duration_cast<std::chrono::milliseconds>(end - start) };
-
-    std::ostringstream content;
-    content << "sigma_mass = " << sigma << " GeV\n\n"
-            << "generated events = " << EVENT_COUNT << "\n"
-            << "selected events = " << fi.get_selected_events_count() << "\n"
-            << "acceptance mass 0 = " << (static_cast<double>(pdf0->Integral()) / EVENT_COUNT) << "\n"
-            << "acceptance mass 1 = " << (static_cast<double>(pdf1->Integral()) / EVENT_COUNT) << "\n"
-            << "execution time = " << elapsed.count() / 1000. << " s\n";
-
-
-    std::ofstream output{ output_file };
-    if (!output)
-        throw std::runtime_error{ "Impossibile creare sigma_mass.txt" };
-
-    output << content.str();
-    output.close();
-
-    std::cout << content.str();
+    
     return 0;
 }
