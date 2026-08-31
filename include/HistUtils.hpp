@@ -66,7 +66,7 @@ struct SavePlotParams
     std::string draw_settings;
 };
 
-namespace save_plot_details
+namespace save_plot_impl
 {
     template<typename Drawable>
     auto init_copy(Drawable* d, const SavePlotParams& params)
@@ -100,7 +100,7 @@ namespace save_plot_details
 template<std::derived_from<TObject> Drawable>
 void save_plot(Drawable* d, const std::string& path, const SavePlotParams& params)
 {
-    auto copy{ save_plot_details::init_copy(d, params) };
+    auto copy{ save_plot_impl::init_copy(d, params) };
     TCanvas canvas{
         "", "", 
         static_cast<Int_t>(params.width),
@@ -118,7 +118,7 @@ void save_plot(Drawable* d, const std::string& path, const SavePlotParams& param
 template<std::derived_from<TObject> Drawable, std::invocable<Drawable*> F>
 void save_plot(Drawable* d, const std::string& path, const SavePlotParams& params, F&& f)
 {
-    auto copy{ save_plot_details::init_copy(d, params) };
+    auto copy{ save_plot_impl::init_copy(d, params) };
     TCanvas canvas{
         "", "", 
         static_cast<Int_t>(params.width),

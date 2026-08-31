@@ -86,18 +86,7 @@ int main(int argc, char** argv)
     //Mass::junk(params.W_MASS0, params.W_MASS1, params.W_WIDTH, EVENT_COUNT);
 
     {
-        auto pT_gen{ std::make_unique<PT_Generator>() };
-        
-
-        auto w_gen{ std::make_unique<W_Generator>(
-            params.W_MASS0,
-            params.W_WIDTH,
-            pT_gen.get()
-        )};
-        WDecaySampler sampler{ w_gen.get() };
-        Spectrum pdf{sampler, EVENT_COUNT};
-
-        Width::find_best_delta_width(params.W_MASS0, params.W_WIDTH, EVENT_COUNT, 25, pdf);
+        Width0::estimate_sigma(params.W_MASS0, params.W_WIDTH, EVENT_COUNT);
     }
 
     auto end{ std::chrono::high_resolution_clock::now() };
