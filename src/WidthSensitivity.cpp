@@ -434,7 +434,7 @@ double Width0::estimate_delta_upper_bound(
 
     
     const auto confidency_upper_bound{ 1.0 + sigma * k };
-    double delta{ deltas[point_count - 2] * deltas[point_count - 1] };
+    double delta{ std::sqrt(deltas[point_count - 2] * deltas[point_count - 1]) };
 
     add_derivative(0);
     for(std::size_t i{}; i < point_count - 1; ++i)

@@ -111,5 +111,5 @@ LorentzVector W_Generator::operator()()
 
 std::unique_ptr<Generator<LorentzVector>> W_Generator::clone() const
 {
-    return std::unique_ptr<Generator<LorentzVector>>{ new W_Generator(mass, width, pT_gen.get()) };
+    return std::unique_ptr<Generator<LorentzVector>>{ new W_Generator(*this) };
 }

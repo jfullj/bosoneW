@@ -8,14 +8,7 @@
 #include <random>
 #include <thread>
 
-
-WDecaySampler::WDecaySampler(const Generator<LorentzVector> * const pT_generator)
-{
-    for(std::size_t i{}; i < std::thread::hardware_concurrency(); ++i )
-        w_local_generators.push_back(pT_generator->clone());
-}
-
-ROOT::Math::PxPyPzEVector generate_random_muon_p_rest_frame(double w_mass, double muon_mass) {
+ROOT::Math::PxPyPzEVector Impl::generate_random_muon_p_rest_frame(double w_mass, double muon_mass) {
     double p = w_mass / 2.0 - muon_mass * muon_mass / (2.0 * w_mass);
     
     double cos_theta = Random::get() * 2.0 - 1.0;
@@ -29,11 +22,8 @@ ROOT::Math::PxPyPzEVector generate_random_muon_p_rest_frame(double w_mass, doubl
     return ROOT::Math::PxPyPzEVector(px, py, pz, E);
 }
 
-WDecaySampler::Event WDecaySampler::operator()() const
+Event::Type Impl::generate_decay_event(ROOT::Math::PxPyPzEVector const& W_p, double invariant_mass, double muon_mass)
 {
-    auto W_p{ (*w_local_generators[ThreadID::get()])() };
-    auto invariant_mass{ W_p.M() };
-
     ROOT::Math::XYZVector beta{
         W_p.Px() / W_p.E(),
         W_p.Py() / W_p.E(),
@@ -41,7 +31,7 @@ WDecaySampler::Event WDecaySampler::operator()() const
     };
 
     //momenti del muone e del neutrino nel sistema di riferimento a riposo del bosone W
-    auto muon_p{ generate_random_muon_p_rest_frame(invariant_mass, MUON_MASS) };
+    auto muon_p{ generate_random_muon_p_rest_frame(invariant_mass, muon_mass) };
 
     ROOT::Math::PxPyPzEVector neutrino_p{ 
         -muon_p.Px(),
@@ -65,5 +55,4 @@ WDecaySampler::Event WDecaySampler::operator()() const
     double mt = std::sqrt(2.0 * pt_mu * pt_nu * (1.0 - std::cos(dphi)));
 
     return { pt_mu, muon_p.Eta(), mt };
-
 }
