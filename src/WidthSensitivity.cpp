@@ -19,19 +19,35 @@ void Debug::init()
 {
     if constexpr(Debug::ENABLE)
     {
-        if(std::filesystem::exists(Debug::DIR))
-            std::filesystem::remove_all(Debug::DIR);
-        std::filesystem::create_directories(Debug::DIR);
-        log_file.open(Debug::LOG_FILE);
-
-        if(!log_file.is_open())
+        static bool initialized{ false };
+        if(!initialized)
         {
-            const auto error_content{ std::format("Width::Debug::init(): impossibile aprire il file di log {}", Debug::LOG_FILE) };
-            throw std::runtime_error(error_content);
+            if(std::filesystem::exists(Debug::DIR))
+                std::filesystem::remove_all(Debug::DIR);
+            std::filesystem::create_directories(Debug::DIR);
+            log_file.open(Debug::LOG_FILE);
+
+            if(!log_file.is_open())
+            {
+                const auto error_content{ std::format("Width::Debug::init(): impossibile aprire il file di log {}", Debug::LOG_FILE) };
+                throw std::runtime_error(error_content);
+            }
+
+            initialized = true;
         }
     }
 }
-
+void Debug::save_histogram(
+    std::string const& filename,
+    std::string const& title,
+    TH1D* histogram)
+{
+    if constexpr(Debug::ENABLE)
+    {
+        auto params{ Debug::plot_params };
+        save_plot(histogram, filename, params);
+    }
+}
 void Debug::save_spectrum(
     std::string const& filename,
     std::string const& title,
@@ -537,10 +553,16 @@ double Width0::estimate_sigma(
 
     FisherInformation fi{ nominal.get_hist(), shifted.get_hist(), delta, nominal.accepted_count() };
 
-    auto sigma{ fi.sigma() };
-    Debug::log(std::format("incertezza sulla larghezza di decadimento: {}", sigma));
+    Debug::save_derivative(
+        std::format("{}/derivative method 0.png", Debug::DIR),
+        std::format("#Delta#Gamma = {:.2e}, ", delta),
+        estimate_spectrum_derivative(nominal, shifted, delta),
+        estimate_spectrum_derivative_uncertainties(nominal, shifted, delta)
+    );
 
-    return sigma;
+    Debug::log(std::format("incertezza: {} pm {}", fi.sigma(), fi.sigma_uncertainty()));
+
+    return fi.sigma();
 }
 
 Width1::BW_WidthDerivativeGenerator::BW_WidthDerivativeGenerator(double mass, double width)
@@ -569,20 +591,167 @@ double Width1::BW_WidthDerivativeGenerator::inverse_cumulative_function(double x
     if(x >= 0. && x <= A)
     {
         auto y{ 2. * (x / beta + alpha) };
-        factor = (1. + std::sqrt(1. - y * y)) / y;
+        auto arg{ std::clamp(1. - y * y, 0.0, 1.0) };
+        factor = (1. + std::sqrt(arg)) / y;
     }
     else if( x >= A && x <= B)
     {
         auto y{ 2. * (x - 0.5) / beta };
-        factor = -y / (1 + std::sqrt(1 - y * y));
+        auto arg{ std::clamp(1. - y * y, 0.0, 1.0) };
+        factor = -y / (1. + std::sqrt(arg));
     }
-    else if(x >= B <= 1.)
+    else if(x >= B && B <= 1.)
     {
         auto y{ 2 * ((x - 0.5) / beta - 1.) };
-        factor = (1. + std::sqrt(1 - y * y))/ y;
+        auto arg{ std::clamp(1. - y * y, 0.0, 1.0) };
+        factor = (1. + std::sqrt(arg)) / y;
     }
     else
         throw std::runtime_error("Width1::BW_WidthDerivativeGenerator::inverse_cumulative_function(): x non valido");
 
-    return mass + width * factor;
+    return mass - width * factor;
+}
+
+Spectrum Width1::build_nominal_spectrum(
+    double mass,
+    double width,
+    std::size_t event_count)
+{
+    auto pT_gen{ std::make_unique<PT_Generator>() };
+    auto W_gen{ std::make_unique<BreitWignerGenerator>(mass, width) };
+
+    auto w_gen{ std::make_unique<W_Generator>(
+        W_gen.get(),
+        pT_gen.get()
+    )};
+    WDecaySampler sampler{ w_gen.get() };
+
+    Spectrum nominal{sampler, event_count};
+    nominal.normalize();
+
+    {
+        ::Debug::save_spectrum(
+            std::format("{}/nominal.png", Debug::DIR),
+            "nominal",
+            nominal
+        );
+    }
+
+    return nominal;
+}
+
+double Width1::calculate_normalization_constant(double mass, double width, Spectrum const& spectrum)
+{
+    double gamma{ mass / width };
+    double alpha{ gamma / (1. + gamma * gamma) };
+
+    double normalization{ 2. * (1. - alpha) / (M_PI * width) };
+    return spectrum.accepted_count() / normalization;
+}
+
+std::unique_ptr<TH1D> Width1::make_merged_derivative(Spectrum const& spectrum)
+{
+    const std::size_t bin_count{ Binning::BIN_COUNT };
+    auto hist{ spectrum.get_hist() };
+    auto merged{
+        std::make_unique<TH1D>(
+            "merged_derivative",
+            "merged_derivative",
+            Binning::BIN_COUNT,
+            Acceptance::MIN_MUON_PT,
+            Acceptance::MAX_MUON_PT
+        )
+    };
+
+    for (int i{ 1 }; i <= Binning::BIN_COUNT; ++i)
+    {
+        merged->SetBinContent(
+            i,
+            hist->GetBinContent(i) -
+            hist->GetBinContent(i + Binning::BIN_COUNT)
+        );
+
+        merged->SetBinError(
+            i,
+            std::hypot(
+                hist->GetBinError(i),
+                hist->GetBinError(i + Binning::BIN_COUNT)
+            )
+        );
+    }
+
+    return merged;
+}
+
+
+std::unique_ptr<TH1D> Width1::build_derivative_spectrum(
+    double mass,
+    double width,
+    std::size_t event_count)
+{
+    auto pT_gen{ std::make_unique<PT_Generator>() };
+    auto W_gen{ std::make_unique<BW_WidthDerivativeGenerator>(mass, width) };
+
+    auto w_gen{ std::make_unique<W_Generator>(
+        W_gen.get(),
+        pT_gen.get()
+    )};
+    WDecaySampler sampler{ w_gen.get() };
+
+    Transformation transform{mass, width};
+
+    Spectrum derivative{
+        sampler,
+        event_count,
+        transform,
+        BIN_PARAMS,
+        Acceptance::standard
+    };
+
+    {
+        ::Debug::save_spectrum(
+            std::format("{}/MC_derivative_result.png", Debug::DIR),
+            "MC Derivative result",
+            derivative
+        );
+    }
+
+    auto merged{ make_merged_derivative(derivative) };
+    auto normalization{ calculate_normalization_constant(mass, width, derivative) };
+
+    merged->Scale(1. / normalization);
+
+    {
+        ::Debug::save_histogram(
+            std::format("{}/derivative method 1.png", Debug::DIR),
+            "derivative method 1",
+            merged.get()
+        );
+    }
+
+    return merged;
+}
+
+double Width1::estimate_sigma(
+    double mass,
+    double width,
+    std::size_t event_count)
+{
+    Debug::init();
+    Debug::log("METODO SENZA RAPPORTI INCREMENTALI...");
+
+    auto nominal{ build_nominal_spectrum(mass, width, event_count) };
+    auto accepted_count{ nominal.accepted_count() };
+
+    Debug::log("creato istogramma nominale...");
+
+    auto derivative{ build_derivative_spectrum(mass, width, event_count) };
+
+    Debug::log("creato istogramma della derivata...");
+
+    FisherInformation fi{ nominal.get_hist(), derivative.get(), accepted_count };
+
+    Debug::log(std::format("incertezza: {} pm {}", fi.sigma(), fi.sigma_uncertainty()));
+
+    return fi.sigma();
 }

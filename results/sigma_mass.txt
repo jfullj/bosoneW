@@ -2,5 +2,5 @@ sigma_mass = inf GeV
 
 generated events = 327600000
 selected events = 0
-acceptance mass 0 = 0.548772
-acceptance mass 1 = 0.549307
+acceptance mass 0 = 0.548828
+acceptance mass 1 = 0.5493

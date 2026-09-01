@@ -31,6 +31,13 @@ namespace Debug
     
     void init();
     void log(std::string_view content);
+
+    void save_histogram(
+        std::string const& filename,
+        std::string const& title,
+        TH1D* histogram
+    );
+
     void save_spectrum(
         std::string const& filename,
         std::string const& title,
@@ -235,6 +242,26 @@ namespace Width1
         double inverse_cumulative_function(double x) const;
         double mass, width;
     };
+
+    Spectrum build_nominal_spectrum(
+        double mass,
+        double width,
+        std::size_t event_count
+    );
+
+    std::unique_ptr<TH1D> make_merged_derivative(Spectrum const& spectrum);
+    double calculate_normalization_constant(double mass, double width, Spectrum const& spectrum);
+    std::unique_ptr<TH1D> build_derivative_spectrum(
+        double mass,
+        double width,
+        std::size_t event_count
+    );
+
+    double estimate_sigma(
+        double mass,
+        double width,
+        std::size_t event_count
+    );
 }
 
 

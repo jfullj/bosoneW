@@ -81,33 +81,34 @@ public:
             params.max 
         }, "muon_pT" );
 
-        hist = std::unique_ptr<TH1D>(dynamic_cast<TH1D*>(h_muon_pt->Clone("h_pt")));
+        m_hist = std::unique_ptr<TH1D>(dynamic_cast<TH1D*>(h_muon_pt->Clone("h_pt")));
+        m_accpeted = m_hist->Integral();
 
-        double N = hist->Integral();
-        for (int i = 1; i <= hist->GetNbinsX(); ++i)
+        double N = m_hist->Integral();
+        for (int i = 1; i <= m_hist->GetNbinsX(); ++i)
         {
-            double content = hist->GetBinContent(i);
+            double content = m_hist->GetBinContent(i);
             double p = content / N;
             double error   = std::sqrt(N * p * (1 - p));
 
-            hist->SetBinError(i, error);
+            m_hist->SetBinError(i, error);
         }
     }
 
-    Spectrum(const Spectrum& other) : hist(std::unique_ptr<TH1D>(dynamic_cast<TH1D*>(other.hist->Clone()))){}
+    Spectrum(const Spectrum& other) : m_hist(std::unique_ptr<TH1D>(dynamic_cast<TH1D*>(other.m_hist->Clone()))){}
 
     Spectrum& operator=(const Spectrum& other)
     {
         if (this != &other)
         {
-            hist.reset(dynamic_cast<TH1D*>(other.hist->Clone()));
+            m_hist.reset(dynamic_cast<TH1D*>(other.m_hist->Clone()));
         }
 
         return *this;
     }
     std::size_t accepted_count() const
     {
-        return hist->Integral();
+        return m_accpeted;
     }
 
     Spectrum(Spectrum&&) = default;
@@ -115,13 +116,13 @@ public:
     
     ~Spectrum() = default;
 
-    TH1D* get_hist() const { return hist.get(); }
-    std::unique_ptr<TH1D> release_hist() { return std::move(hist); }
+    TH1D* get_hist() const { return m_hist.get(); }
+    std::unique_ptr<TH1D> release_hist() { return std::move(m_hist); }
     
-    void normalize() { hist->Scale(1. / hist->Integral("width")); }
+    void normalize() { m_hist->Scale(1. / m_hist->Integral("width")); }
 private:
-
-    std::unique_ptr<TH1D> hist;
+    std::size_t m_accpeted;
+    std::unique_ptr<TH1D> m_hist;
 };
 
 #endif //SPECTRUM_HPP
