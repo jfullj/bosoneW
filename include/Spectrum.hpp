@@ -5,14 +5,14 @@
 #include <TH1.h>
 #include <ROOT/RDataFrame.hxx>
 
-
 namespace Acceptance
 {
     inline constexpr double MIN_MUON_PT = 26.0; // GeV/c
     inline constexpr double MAX_MUON_PT = 56.0; // GeV/c
     inline constexpr double MIN_ETA = -2.4;
     inline constexpr double MAX_ETA = 2.4;
-    inline constexpr double MIN_TRANSVERSE_MASS = 40; //GeV/x
+    inline constexpr double MIN_TRANSVERSE_MASS = 40; //GeV/c
+    inline constexpr double MUON_PT_RANGE = MAX_MUON_PT - MIN_MUON_PT;
 
     inline bool standard(Event::Type const& e)
     {
@@ -57,15 +57,23 @@ class Spectrum
 {
 public:
     Spectrum() = delete;
-    template<Event::Transformation Trans, Acceptance::Type Acc>
-    Spectrum(const WDecaySampler<Trans>& sampler, std::size_t event_count, Binning::Parameters const& params, Acc&& acceptance)
+    template<
+        Event::Transform::Callable Trans = decltype(Event::Transform::standard),
+        Acceptance::Type Acc = decltype(Acceptance::standard)>
+    Spectrum(
+        const WDecaySampler& sampler,
+        std::size_t event_count,
+        Trans transform = Event::Transform::standard,
+        Binning::Parameters const& params = Binning::standard, 
+        Acc acceptance = Acceptance::standard)
     {
         ROOT::RDataFrame df{ event_count };
         auto h_muon_pt = df.Define("muon", [&sampler](){
             return sampler();
         })
-        .Define("muon_pT", [](Event::Type muon){ return muon.muon_pT; }, {"muon"})
         .Filter(acceptance, {"muon"})
+        .Redefine("muon", transform, {"muon"})
+        .Define("muon_pT", [](Event::Type muon){ return muon.muon_pT; }, {"muon"})
         .Histo1D({
             "", "",
             params.bin_count,
@@ -85,13 +93,6 @@ public:
             hist->SetBinError(i, error);
         }
     }
-    template<Event::Transformation Trans>
-    Spectrum(const WDecaySampler<Trans>& sampler, std::size_t event_count)
-    : Spectrum(sampler, event_count, Binning::standard) {}
-    
-    template<Event::Transformation Trans>   
-    Spectrum(const WDecaySampler<Trans>& sampler, std::size_t event_count, Binning::Parameters const& params)
-    : Spectrum(sampler, event_count, params, Acceptance::standard) {}
 
     Spectrum(const Spectrum& other) : hist(std::unique_ptr<TH1D>(dynamic_cast<TH1D*>(other.hist->Clone()))){}
 
@@ -103,6 +104,10 @@ public:
         }
 
         return *this;
+    }
+    std::size_t accepted_count() const
+    {
+        return hist->Integral();
     }
 
     Spectrum(Spectrum&&) = default;

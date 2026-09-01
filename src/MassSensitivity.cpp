@@ -14,7 +14,6 @@ void Mass::junk(double wmass0, double wmass1, double wwidth, std::size_t event_c
     const auto wdelta{ wmass1 - wmass0 };
 
     auto pT_gen{ std::make_unique<PT_Generator>() };
-
     save_plot(pT_gen->get_hist(), pT_dist_dir, SavePlotParams{
         .width = CANVAS_WIDTH,
         .height = CANVAS_HEIGHT,
@@ -29,15 +28,14 @@ void Mass::junk(double wmass0, double wmass1, double wwidth, std::size_t event_c
         .draw_settings = ""
     });
 
+    auto W_mass_gen0{ std::make_unique<BreitWignerGenerator>(wmass0, wwidth) };
     auto w_gen0{ std::make_unique<W_Generator>(
-        wmass0,
-        wwidth,
+        W_mass_gen0.get(), 
         pT_gen.get()
     )};
-
+    auto W_mass_gen1{ std::make_unique<BreitWignerGenerator>(wmass1, wwidth) };
     auto w_gen1{ std::make_unique<W_Generator>(
-        wmass1,
-        wwidth,
+        W_mass_gen1.get(),
         pT_gen.get()
     )};
 
@@ -53,7 +51,6 @@ void Mass::junk(double wmass0, double wmass1, double wwidth, std::size_t event_c
         wdelta
     };
 
-    auto ratioHist{ fi.releaseRatioHist() };
     double sigma{ fi.sigma() };
 
     TemplateComparison tc(pdf0.get(), pdf1.get(), sigma, {
@@ -79,9 +76,9 @@ void Mass::junk(double wmass0, double wmass1, double wwidth, std::size_t event_c
 
     {
         auto pT_gen{ std::make_unique<PT_Delta_Generator>(8) };
+        auto W_gen{ std::make_unique<BreitWignerGenerator>(wmass0, wwidth) };
         auto w_gen{ std::make_unique<W_Generator>(
-            wmass0,
-            wwidth,
+            W_gen.get(),
             pT_gen.get()
         )}; 
 
@@ -89,7 +86,8 @@ void Mass::junk(double wmass0, double wmass1, double wwidth, std::size_t event_c
 
         Spectrum spectrum{
             sampler,
-            event_count, 
+            event_count,
+            Event::Transform::standard,
             Binning::Parameters{
                 .bin_count = 100,
                 .min = 0,

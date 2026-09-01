@@ -8,6 +8,22 @@
 #include <random>
 #include <thread>
 
+WDecaySampler::WDecaySampler(const Generator<LorentzVector> * const W_generator)
+{
+    for(std::size_t i{}; i < std::thread::hardware_concurrency(); ++i )
+        w_local_generators.push_back(W_generator->clone());
+}
+
+Event::Type WDecaySampler::operator()() const
+{
+    auto W_p{ (*w_local_generators[ThreadID::get()])() };
+    auto invariant_mass{ W_p.M() };
+
+    auto e{ Impl::generate_decay_event(W_p, invariant_mass, MUON_MASS) };
+    return e;
+}
+
+
 ROOT::Math::PxPyPzEVector Impl::generate_random_muon_p_rest_frame(double w_mass, double muon_mass) {
     double p = w_mass / 2.0 - muon_mass * muon_mass / (2.0 * w_mass);
     
@@ -54,5 +70,5 @@ Event::Type Impl::generate_decay_event(ROOT::Math::PxPyPzEVector const& W_p, dou
 
     double mt = std::sqrt(2.0 * pt_mu * pt_nu * (1.0 - std::cos(dphi)));
 
-    return { pt_mu, muon_p.Eta(), mt };
+    return { invariant_mass, pt_mu, muon_p.Eta(), mt };
 }

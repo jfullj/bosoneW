@@ -166,10 +166,10 @@ Spectrum Width0::generate_spectrum_unnormalized(
     std::size_t event_count)
 {
     auto pT_gen{ std::make_unique<PT_Generator>() };
+    auto W_gen{ std::make_unique<BreitWignerGenerator>(mass, width) };
 
     auto w_gen{ std::make_unique<W_Generator>(
-        mass,
-        width,
+        W_gen.get(),
         pT_gen.get()
     )};
 
@@ -425,6 +425,8 @@ double Width0::estimate_delta_upper_bound(
         Debug::log(std::format("{}: cost:{:.2e}, delta:{:.2e}", i, costs[i], deltas[i]));
     };
 
+
+
     double ratio{ gamma_lower_bound / gamma_upper_bound };
     for(std::size_t i{}; i  < point_count; ++i)
     {
@@ -477,6 +479,8 @@ double Width0::find_best_delta(
 {
     auto range_lower_bound{ estimate_range_lower_bound(mass, width, nominal) };
     auto range_upper_bound{ width };
+
+    Debug::log(std::format("range: [{:.2e},{:.2e}]", range_lower_bound, range_upper_bound));
 
     auto delta_upper_bound{
         estimate_delta_upper_bound(
@@ -531,10 +535,54 @@ double Width0::estimate_sigma(
 
     auto shifted{ generate_spectrum_unnormalized(mass, width + delta, event_count) };
 
-    FisherInformation fi{ nominal.get_hist(), shifted.get_hist(), delta };
+    FisherInformation fi{ nominal.get_hist(), shifted.get_hist(), delta, nominal.accepted_count() };
 
     auto sigma{ fi.sigma() };
     Debug::log(std::format("incertezza sulla larghezza di decadimento: {}", sigma));
 
     return sigma;
+}
+
+Width1::BW_WidthDerivativeGenerator::BW_WidthDerivativeGenerator(double mass, double width)
+: mass{mass}, width{width} {}
+
+double Width1::BW_WidthDerivativeGenerator::operator()()
+{
+    return inverse_cumulative_function(Random::get());
+}
+std::unique_ptr<Generator<double>> Width1::BW_WidthDerivativeGenerator::clone() const
+{
+    return std::unique_ptr<Generator<double>>{ new BW_WidthDerivativeGenerator(mass, width) };
+}
+
+double Width1::BW_WidthDerivativeGenerator::inverse_cumulative_function(double x) const
+{
+    const auto gamma { mass / width };
+    const auto alpha { gamma / (gamma * gamma + 1) };
+    const auto beta { 1. / (2 * ( 1. - alpha)) };
+
+    double factor{};
+
+    const auto A{ beta * ( 0.5 - alpha) };
+    const auto B{ 0.5 * (1 + beta) };
+
+    if(x >= 0. && x <= A)
+    {
+        auto y{ 2. * (x / beta + alpha) };
+        factor = (1. + std::sqrt(1. - y * y)) / y;
+    }
+    else if( x >= A && x <= B)
+    {
+        auto y{ 2. * (x - 0.5) / beta };
+        factor = -y / (1 + std::sqrt(1 - y * y));
+    }
+    else if(x >= B <= 1.)
+    {
+        auto y{ 2 * ((x - 0.5) / beta - 1.) };
+        factor = (1. + std::sqrt(1 - y * y))/ y;
+    }
+    else
+        throw std::runtime_error("Width1::BW_WidthDerivativeGenerator::inverse_cumulative_function(): x non valido");
+
+    return mass + width * factor;
 }

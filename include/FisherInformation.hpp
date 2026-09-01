@@ -7,7 +7,10 @@ class FisherInformation
 {
 public:
     FisherInformation() = delete;
-    FisherInformation(TH1D* h0, TH1D* h1, double deltaMass);
+    //richiede istogrammi anche non normalizzati
+    FisherInformation(TH1D * nominal, TH1D * shifted, double parameter_delta, std::size_t accepted_events);
+    //richiede che nominal sia normalizzato e derivative sia la sua derivata.
+    FisherInformation(TH1D * nominal, TH1D * derivative, std::size_t accepted_events);
 
     FisherInformation(const FisherInformation&) = delete;
     FisherInformation& operator=(const FisherInformation&) = delete;
@@ -15,17 +18,18 @@ public:
     FisherInformation(FisherInformation&&) = default;
     FisherInformation& operator=(FisherInformation&&) = default;
 
-    TH1D* getRatioHist() const;
-    std::unique_ptr<TH1D> releaseRatioHist();
-
     std::size_t get_selected_events_count() const;
     double sigma() const;
+    double sigma_uncertainty() const;
+    double fisher() const;
+    double fisher_uncertainty() const;
     ~FisherInformation() = default;
 private:
 
-    std::unique_ptr<TH1D> ratioHist;
-    double sigmaMass;
-    std::size_t selectedEvents;
+    double m_sigma,
+        m_sigma_uncertainty,
+        m_fisher, 
+        m_fisher_uncertainty;
 };
 
 #endif //FISHERINFORMATION_HPP

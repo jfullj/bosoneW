@@ -2,44 +2,92 @@
 #include <cmath>
 #include <iostream>
 
-FisherInformation::FisherInformation(TH1D* h0, TH1D* h1, double deltaMass)
+FisherInformation::FisherInformation(TH1D * nominal, TH1D * shifted, double parameter_delta, std::size_t accepted_events)
 {
-    ratioHist = std::unique_ptr<TH1D>(
-        dynamic_cast<TH1D*>(h1->Clone("h_ratio"))
-    );
-    ratioHist->Divide(h0);
-    
-    double norm0 = h0->Integral("width");
-    double norm1 = h1->Integral("width");
+    m_fisher = 0.0;
 
-    double fisher = 0.0;
+    const auto norm_nominal{ nominal->Integral("width") };
+    const auto norm_shifted{ shifted->Integral("width") };
 
-    for (int i = 1; i <= h0->GetNbinsX(); ++i)
+    for (int i = 1; i <= nominal->GetNbinsX(); ++i)
     {
-        double p0 = h0->GetBinContent(i) * h0->GetBinWidth(i) / norm0;
-        double p1 = h1->GetBinContent(i) * h1->GetBinWidth(i) / norm1;
-        double dpdm = (p1 - p0) / deltaMass;
+        const auto p_nominal{ nominal->GetBinContent(i) / norm_nominal };
+        const auto p_shifted{ shifted->GetBinContent(i) / norm_shifted };
 
-        fisher += dpdm * dpdm / p0;
+        const auto d{ (p_shifted - p_nominal) / parameter_delta };
+
+        m_fisher += d * d / p_nominal;
     }
-    selectedEvents = h0->Integral();
-    sigmaMass = 1.0 / std::sqrt(selectedEvents * fisher);
-}
-std::size_t FisherInformation::get_selected_events_count() const
-{
-    return selectedEvents;
+    m_fisher *= accepted_events;
+
+    double fisher_variance{};
+    for (int i = 1; i <= nominal->GetNbinsX(); ++i)
+    {
+        const auto p_nominal{ nominal->GetBinContent(i) / norm_nominal };
+        const auto p_shifted{ shifted->GetBinContent(i) / norm_shifted };
+
+        const auto d{ (p_shifted - p_nominal) / parameter_delta };
+
+        const auto sigma_p_nominal{ nominal->GetBinError(i) / norm_nominal };
+        const auto sigma_p_shifted{ shifted->GetBinError(i) / norm_shifted };
+        const auto sigma_d{ 
+            std::sqrt(std::pow(sigma_p_nominal, 2.) + std::pow(sigma_p_shifted, 2.)) / parameter_delta };
+        
+        fisher_variance += 
+            std::pow(2 * d / p_nominal * sigma_d, 2) 
+            + std::pow(d * d / (p_nominal * p_nominal) * sigma_p_nominal, 2)
+            + 4. * std::pow(d/ p_nominal, 3.) * (sigma_p_nominal * sigma_p_nominal) / parameter_delta;
+    }
+    fisher_variance *= accepted_events * accepted_events;
+    m_fisher_uncertainty = std::sqrt(fisher_variance);
+
+    m_sigma = 1. / std::sqrt(m_fisher);
+    m_sigma_uncertainty = m_fisher_uncertainty / (2 * std::pow(m_fisher, 1.5));
 }
 
-TH1D* FisherInformation::getRatioHist() const
+FisherInformation::FisherInformation(TH1D * nominal, TH1D * derivative, std::size_t accepted_events)
 {
-    return ratioHist.get();
-}
-std::unique_ptr<TH1D> FisherInformation::releaseRatioHist()
-{
-    return std::move(ratioHist);
+    m_fisher = 0.0;
+    for (int i = 1; i <= nominal->GetNbinsX(); ++i)
+    {
+        const auto d{ derivative->GetBinContent(i) };
+        const auto p{ nominal->GetBinContent(i) };
+
+        m_fisher += d * d / p;
+    }
+    m_fisher *= accepted_events;
+ 
+    double fisher_variance{};
+    for (int i = 1; i <= nominal->GetNbinsX(); ++i)
+    {
+        const auto d{ derivative->GetBinContent(i) };
+        const auto p{ nominal->GetBinContent(i) };
+
+        const auto sigma_d{ derivative->GetBinError(i) };
+        const auto sigma_p{ nominal->GetBinError(i) };
+
+        fisher_variance += std::pow(2 * d / p * sigma_d, 2) + std::pow(d * d / (p * p) * sigma_p, 2);
+    }
+    fisher_variance *= accepted_events * accepted_events;
+    m_fisher_uncertainty = std::sqrt(fisher_variance);
+
+    m_sigma = 1. / std::sqrt(m_fisher);
+    m_sigma_uncertainty = m_fisher_uncertainty / (2 * std::pow(m_fisher, 1.5));
 }
 
 double FisherInformation::sigma() const
 {
-    return sigmaMass;
+    return m_sigma;
+}
+double FisherInformation::sigma_uncertainty() const
+{
+    return m_sigma_uncertainty;
+}
+double FisherInformation::fisher() const
+{
+    return m_fisher;
+}
+double FisherInformation::fisher_uncertainty() const
+{
+    return m_fisher_uncertainty;
 }

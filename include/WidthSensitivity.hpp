@@ -186,7 +186,55 @@ namespace Width0
 
 namespace Width1
 {
-    
+    struct Transformation
+    {
+        double w_mass;
+        double w_width;
+
+        explicit Transformation(double w_mass, double w_width)
+        : w_mass{w_mass}, w_width{w_width} {}
+
+        Event::Type operator()(Event::Type const& e)
+        {
+            auto modified_e{ e };
+
+            const double offset{ Acceptance::MUON_PT_RANGE };
+            const double lb{ w_mass - w_width };
+            const double ub{ w_mass + w_width };
+
+            if(e.w_invariant_mass >= lb && e.w_invariant_mass <= ub)
+                modified_e.muon_pT += offset;
+            
+            return modified_e;
+        }
+    };
+
+    inline const Binning::Parameters BIN_PARAMS{
+        .bin_count = Binning::BIN_COUNT * 2,
+        .min = Acceptance::MIN_MUON_PT,
+        .max = Acceptance::MIN_MUON_PT + Acceptance::MUON_PT_RANGE * 2
+    };
+
+    class BW_WidthDerivativeGenerator : public Generator<double>
+    {
+    public:
+        BW_WidthDerivativeGenerator() = default;
+        BW_WidthDerivativeGenerator(double mass, double width);
+
+        BW_WidthDerivativeGenerator& operator=(const BW_WidthDerivativeGenerator&) = delete;
+
+
+        BW_WidthDerivativeGenerator(BW_WidthDerivativeGenerator&&) = default;
+        BW_WidthDerivativeGenerator& operator=(BW_WidthDerivativeGenerator&&) = default;
+
+        virtual double operator()();
+        virtual std::unique_ptr<Generator> clone() const;
+        virtual ~BW_WidthDerivativeGenerator() = default;
+    private:
+        BW_WidthDerivativeGenerator(const BW_WidthDerivativeGenerator&) = default;
+        double inverse_cumulative_function(double x) const;
+        double mass, width;
+    };
 }
 
 

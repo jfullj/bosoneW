@@ -99,13 +99,34 @@ private:
     double pT;
 };
 
+class BreitWignerGenerator : public Generator<double>
+{
+public:
+    BreitWignerGenerator() = default;
+    BreitWignerGenerator(double mass, double width);
+
+    BreitWignerGenerator& operator=(const BreitWignerGenerator&) = delete;
+
+
+    BreitWignerGenerator(BreitWignerGenerator&&) = default;
+    BreitWignerGenerator& operator=(BreitWignerGenerator&&) = default;
+
+    virtual double operator()();
+    virtual std::unique_ptr<Generator> clone() const;
+    virtual ~BreitWignerGenerator() = default;
+private:
+    BreitWignerGenerator(const BreitWignerGenerator&) = default;
+
+    double mass, width;
+};
+
 using LorentzVector = ROOT::Math::PxPyPzEVector;
 //genera la massa del W, richiede in ingresso il generatore del momento trasverso.
 class W_Generator : public Generator<LorentzVector>
 {
 public:
     W_Generator() = default;
-    W_Generator(double mass, double width, const Generator<double>* const pT);
+    W_Generator(const Generator<double>* const pT, const Generator<double>* const W_mass);
 
     W_Generator& operator=(const W_Generator&) = delete;
 
@@ -119,13 +140,10 @@ public:
 
     static constexpr double MIN_RAPIDITY = -3.0;
     static constexpr double MAX_RAPIDITY = 3.0;
-
+protected:
+    std::unique_ptr<Generator<double>> pT_gen, W_mass_gen;
 private:
     W_Generator(const W_Generator&);
-
-    std::unique_ptr<Generator<double>> pT_gen;
-    double mass;
-    double width;
 };
 
 

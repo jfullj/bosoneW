@@ -62,9 +62,8 @@ std::unique_ptr<Generator<double>> PT_Delta_Generator::clone() const
     return std::unique_ptr<Generator<double>>{ new PT_Delta_Generator{ pT } };
 }
 
-W_Generator::W_Generator(double mass, double width, const Generator<double>* const pT)
-: mass{mass}
-, width{width}
+W_Generator::W_Generator(const Generator<double>* const pT, const Generator<double>* const W_mass)
+: W_mass_gen{ W_mass->clone() }
 , pT_gen{ pT->clone() }
 {
 
@@ -73,10 +72,6 @@ W_Generator::W_Generator(double mass, double width, const Generator<double>* con
 double generate_random_eta() {
     double cos_theta = Random::get() * 2.0 - 1.0;
     return std::atanh(cos_theta);
-}
-
-double generate_random_invariant_mass(double w_mass, double w_width) {
-    return w_mass + w_width * std::tan(M_PI * (Random::get() - 0.5));
 }
 
 double generate_random_phi() {
@@ -102,7 +97,7 @@ ROOT::Math::PxPyPzEVector calculate_boson_p(double m_mass,double pTW, double rap
 LorentzVector W_Generator::operator()()
 {
     double pTW{ (*pT_gen)() };
-    double invariant_mass{ generate_random_invariant_mass(mass, width) };
+    double invariant_mass{ (*W_mass_gen)() };
     double rapidity{ generate_random_rapidity(MIN_RAPIDITY, MAX_RAPIDITY) };
     double phi{ generate_random_phi() };
 
@@ -116,7 +111,18 @@ std::unique_ptr<Generator<LorentzVector>> W_Generator::clone() const
 
 W_Generator::W_Generator(W_Generator const& other)
     : pT_gen{other.pT_gen->clone()}
-    , mass{other.mass}
-    , width{other.width}
+    , W_mass_gen{other.W_mass_gen->clone()}
 {
+}
+
+BreitWignerGenerator::BreitWignerGenerator(double mass, double width)
+: mass{mass}, width{width} {}
+
+double BreitWignerGenerator::operator()()
+{
+    return mass + width * std::tan(M_PI * (Random::get() - 0.5));
+}
+std::unique_ptr<Generator<double>> BreitWignerGenerator::clone() const
+{
+    return std::unique_ptr<Generator<double>>{ new BreitWignerGenerator{mass, width} };
 }
