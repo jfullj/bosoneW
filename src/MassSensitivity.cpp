@@ -98,7 +98,7 @@ void Mass::junk(double wmass0, double wmass1, double wwidth, std::size_t event_c
         auto pdf{ spectrum.release_hist() };
         pdf->Scale(1 / pdf->Integral("width"));
 
-        save_plot(spectrum.get_hist(), DATA_DIR "/results/pTW const.png", SavePlotParams{
+        save_plot(pdf.get(), DATA_DIR "/results/pTW const.png", SavePlotParams{
             .width = CANVAS_WIDTH,
             .height = CANVAS_HEIGHT,
             .name = "",
@@ -116,7 +116,7 @@ void Mass::junk(double wmass0, double wmass1, double wwidth, std::size_t event_c
     std::ostringstream content;
     content << "sigma_mass = " << sigma << " GeV\n\n"
             << "generated events = " << event_count << "\n"
-            << "selected events = " << fi.get_selected_events_count() << "\n"
+            << "selected events = " << fi.get_accepted_events_count() << "\n"
             << "acceptance mass 0 = " << (static_cast<double>(pdf0->Integral()) / event_count) << "\n"
             << "acceptance mass 1 = " << (static_cast<double>(pdf1->Integral()) / event_count) << "\n";
 

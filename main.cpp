@@ -83,7 +83,7 @@ int main(int argc, char** argv)
     auto params { read_parameters(input_file) };
     auto EVENT_COUNT{ get_event_count(params) };    
     
-    //Mass::junk(params.W_MASS0, params.W_MASS1, params.W_WIDTH, EVENT_COUNT);
+    Mass::junk(params.W_MASS0, params.W_MASS1, params.W_WIDTH, EVENT_COUNT);
 
     {
         Width0::estimate_sigma(params.W_MASS0, params.W_WIDTH, EVENT_COUNT);

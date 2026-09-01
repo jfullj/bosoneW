@@ -18,7 +18,7 @@ public:
     FisherInformation(FisherInformation&&) = default;
     FisherInformation& operator=(FisherInformation&&) = default;
 
-    std::size_t get_selected_events_count() const;
+    std::size_t get_accepted_events_count() const;
     double sigma() const;
     double sigma_uncertainty() const;
     double fisher() const;
@@ -30,6 +30,7 @@ private:
         m_sigma_uncertainty,
         m_fisher, 
         m_fisher_uncertainty;
+    std::size_t m_accepted_events;
 };
 
 #endif //FISHERINFORMATION_HPP

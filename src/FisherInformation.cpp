@@ -4,6 +4,7 @@
 
 FisherInformation::FisherInformation(TH1D * nominal, TH1D * shifted, double parameter_delta, std::size_t accepted_events)
 {
+    m_accepted_events = accepted_events;
     m_fisher = 0.0;
 
     const auto norm_nominal{ nominal->Integral("width") };
@@ -47,6 +48,7 @@ FisherInformation::FisherInformation(TH1D * nominal, TH1D * shifted, double para
 
 FisherInformation::FisherInformation(TH1D * nominal, TH1D * derivative, std::size_t accepted_events)
 {
+    m_accepted_events = accepted_events;
     m_fisher = 0.0;
     for (int i = 1; i <= nominal->GetNbinsX(); ++i)
     {
@@ -90,4 +92,8 @@ double FisherInformation::fisher() const
 double FisherInformation::fisher_uncertainty() const
 {
     return m_fisher_uncertainty;
+}
+std::size_t FisherInformation::get_accepted_events_count() const
+{
+    return m_accepted_events;
 }

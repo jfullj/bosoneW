@@ -126,7 +126,7 @@ class W_Generator : public Generator<LorentzVector>
 {
 public:
     W_Generator() = default;
-    W_Generator(const Generator<double>* const pT, const Generator<double>* const W_mass);
+    W_Generator(const Generator<double>* const W_mass, const Generator<double>* const pT);
 
     W_Generator& operator=(const W_Generator&) = delete;
 

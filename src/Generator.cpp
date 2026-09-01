@@ -62,7 +62,7 @@ std::unique_ptr<Generator<double>> PT_Delta_Generator::clone() const
     return std::unique_ptr<Generator<double>>{ new PT_Delta_Generator{ pT } };
 }
 
-W_Generator::W_Generator(const Generator<double>* const pT, const Generator<double>* const W_mass)
+W_Generator::W_Generator(const Generator<double>* const W_mass, const Generator<double>* const pT)
 : W_mass_gen{ W_mass->clone() }
 , pT_gen{ pT->clone() }
 {
