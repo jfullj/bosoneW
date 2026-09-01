@@ -113,3 +113,10 @@ std::unique_ptr<Generator<LorentzVector>> W_Generator::clone() const
 {
     return std::unique_ptr<Generator<LorentzVector>>{ new W_Generator(*this) };
 }
+
+W_Generator::W_Generator(W_Generator const& other)
+    : pT_gen{other.pT_gen->clone()}
+    , mass{other.mass}
+    , width{other.width}
+{
+}
