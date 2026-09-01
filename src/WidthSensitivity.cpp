@@ -600,7 +600,7 @@ double Width1::BW_WidthDerivativeGenerator::inverse_cumulative_function(double x
         auto arg{ std::clamp(1. - y * y, 0.0, 1.0) };
         factor = -y / (1. + std::sqrt(arg));
     }
-    else if(x >= B && B <= 1.)
+    else if(x >= B && x <= 1.)
     {
         auto y{ 2 * ((x - 0.5) / beta - 1.) };
         auto arg{ std::clamp(1. - y * y, 0.0, 1.0) };
