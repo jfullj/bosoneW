@@ -49,7 +49,7 @@ namespace Debug
         std::vector<double> const& deltas
     );
 
-    void save_derivative(
+    std::unique_ptr<TH1D> save_derivative(
         std::string const& filename, 
         std::string const& title,
         std::vector<double> const& derivative,
@@ -103,7 +103,7 @@ namespace Width0
     );
 
     inline const double EPSILON{ 2 };
-    inline const double DNR_LOWER_BOUND{ 12 };
+    inline const double DNR_LOWER_BOUND{ 4 };
     inline const double MAX_ITERATION_COUNT{ 10 };
 
     namespace Impl
@@ -161,7 +161,7 @@ namespace Width0
     //si cerca il primo punto per cui la funzione di costo è minore di 1 + simga * k e lo sono
     //anche i m - 1 punti successivi, in modo da garantire maggiore stabilità.
     //per ogni punto viene generato un istogramma con event_count / coarseness punti.
-    inline const std::size_t MONTECARLO_COARSENESS = 1;
+    inline const std::size_t MONTECARLO_COARSENESS = 100;
     inline const std::size_t STABILITY_WINDOW_SIZE = 5;
     inline const double CONFIDENCE_SIGMA_MULTIPLIER = 5;
     inline const std::size_t POINT_COUNT = 30;
@@ -184,7 +184,7 @@ namespace Width0
         std::size_t event_count
     );
 
-    double estimate_sigma(
+    std::pair<double, std::unique_ptr<TH1D>> estimate_sigma(
         double mass,
         double width,
         std::size_t event_count
@@ -259,7 +259,7 @@ namespace Width1
         std::size_t event_count
     );
 
-    double estimate_sigma(
+    std::pair<double, std::unique_ptr<TH1D>> estimate_sigma(
         double mass,
         double width,
         std::size_t event_count

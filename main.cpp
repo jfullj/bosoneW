@@ -86,8 +86,29 @@ int main(int argc, char** argv)
     //Mass::junk(params.W_MASS0, params.W_MASS1, params.W_WIDTH, EVENT_COUNT);
 
     {
-        Width0::estimate_sigma(params.W_MASS0, params.W_WIDTH, EVENT_COUNT);
-        Width1::estimate_sigma(params.W_MASS0, params.W_WIDTH, EVENT_COUNT);
+        auto [sigma0, hist0] = Width0::estimate_sigma(params.W_MASS0, params.W_WIDTH, EVENT_COUNT);
+        auto [sigma1, hist1] = Width1::estimate_sigma(params.W_MASS0, params.W_WIDTH, EVENT_COUNT);
+
+        TemplateComparison tc(hist0.get(), hist1.get(), sigma0, {
+            .width = 1280,
+            .height = 720,
+            .nominal_mass = sigma0,
+            .shifted_mass = sigma1,
+            .pad_height_ratio = 2,
+            .gap = 0.02,
+            .nominal_hist_color = kBlue + 1,
+            .shifted_hist_color = kRed + 1,
+            .upper_x_axis_content = "",
+            .lower_x_axis_content = "p_{T}^{#mu} [GeV]",
+            .upper_y_axis_content = "events / N",
+            .lower_y_axis_content = "#frac{f_{m+#Deltam}}{f_{m}}",
+            .title_size = 0.055,
+            .label_size = 0.045,
+            .title_offset_x = 1.20,
+            .title_offset_y = 1.20
+        });
+
+        tc.save_as(DATA_DIR "/results/width derivatives.png");
     }
 
     auto end{ std::chrono::high_resolution_clock::now() };

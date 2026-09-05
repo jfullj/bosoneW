@@ -14,6 +14,8 @@
 
 #include <HistUtils.hpp>
 #include <FisherInformation.hpp>
+#include <utility>
+
 
 void Debug::init()
 {
@@ -76,7 +78,7 @@ void Debug::save_all_spectra(
     }
 }
 
-void Debug::save_derivative(
+std::unique_ptr<TH1D> Debug::save_derivative(
     std::string const& filename, 
     std::string const& title, 
     std::vector<double> const& derivative,
@@ -96,7 +98,11 @@ void Debug::save_derivative(
         auto params{ plot_params };
         params.name = title.c_str();
         save_plot(hist.get(), filename, params);
+
+        return hist;
     }
+
+    return nullptr;
 }
 
 void Debug::save_all_derivatives(
@@ -402,6 +408,8 @@ double Width0::estimate_delta_upper_bound(
     const auto dof{ nominal.get_hist()->GetNbinsX() - 1 };
     const double sigma{ std::sqrt(2.0 / dof) };
 
+    gamma_upper_bound = gamma_upper_bound * std::sqrt(coarseness);
+
     Debug::log(std::format("sigma:{}, dof:{}", sigma, dof));
 
     std::vector<Spectrum> spectra;
@@ -536,7 +544,7 @@ double Width0::find_best_delta(
     return final_delta;
 }
 
-double Width0::estimate_sigma(
+std::pair<double, std::unique_ptr<TH1D>> Width0::estimate_sigma(
     double mass,
     double width,
     std::size_t event_count)
@@ -553,16 +561,29 @@ double Width0::estimate_sigma(
 
     FisherInformation fi{ nominal.get_hist(), shifted.get_hist(), delta, nominal.accepted_count() };
 
-    Debug::save_derivative(
+    shifted.normalize();
+    auto hist { Debug::save_derivative(
         std::format("{}/derivative method 0.png", Debug::DIR),
         std::format("#Delta#Gamma = {:.2e}, ", delta),
-        estimate_spectrum_derivative(nominal, shifted, delta),
-        estimate_spectrum_derivative_uncertainties(nominal, shifted, delta)
-    );
+        estimate_spectrum_derivative(normalized_nominal, shifted, delta),
+        estimate_spectrum_derivative_uncertainties(normalized_nominal, shifted, delta)
+    ) };
+
+    Debug::log("PUNTI DEL PLOT FINALE: bin - valore - incertezza");
+    for(std::size_t i{1}; i < hist->GetNbinsX(); ++i)
+    {
+        Debug::log(
+            std::format("{} {} {}", 
+                hist->GetBinCenter(i), 
+                hist->GetBinContent(i),
+                hist->GetBinError(i)
+            )
+        );
+    }
 
     Debug::log(std::format("incertezza: {} pm {}", fi.sigma(), fi.sigma_uncertainty()));
 
-    return fi.sigma();
+    return std::pair{fi.sigma(), std::move(hist)};
 }
 
 Width1::BW_WidthDerivativeGenerator::BW_WidthDerivativeGenerator(double mass, double width)
@@ -732,7 +753,7 @@ std::unique_ptr<TH1D> Width1::build_derivative_spectrum(
     return merged;
 }
 
-double Width1::estimate_sigma(
+std::pair<double, std::unique_ptr<TH1D>> Width1::estimate_sigma(
     double mass,
     double width,
     std::size_t event_count)
@@ -747,11 +768,23 @@ double Width1::estimate_sigma(
 
     auto derivative{ build_derivative_spectrum(mass, width, event_count) };
 
+    Debug::log("PUNTI DEL PLOT FINALE: bin - valore - incertezza");
+    for(std::size_t i{1}; i < derivative->GetNbinsX(); ++i)
+    {
+        Debug::log(
+            std::format("{} {} {}", 
+                derivative->GetBinCenter(i), 
+                derivative->GetBinContent(i),
+                derivative->GetBinError(i)
+            )
+        );
+    }
+
     Debug::log("creato istogramma della derivata...");
 
     FisherInformation fi{ nominal.get_hist(), derivative.get(), accepted_count };
 
     Debug::log(std::format("incertezza: {} pm {}", fi.sigma(), fi.sigma_uncertainty()));
 
-    return fi.sigma();
+    return std::make_pair(fi.sigma(), std::move(derivative));
 }

@@ -17,7 +17,7 @@ FisherInformation::FisherInformation(TH1D * nominal, TH1D * shifted, double para
 
         const auto d{ (p_shifted - p_nominal) / parameter_delta };
 
-        m_fisher += d * d / p_nominal;
+        m_fisher += d * d / p_nominal * nominal->GetBinWidth(i);
     }
     m_fisher *= accepted_events;
 
@@ -34,10 +34,13 @@ FisherInformation::FisherInformation(TH1D * nominal, TH1D * shifted, double para
         const auto sigma_d{ 
             std::sqrt(std::pow(sigma_p_nominal, 2.) + std::pow(sigma_p_shifted, 2.)) / parameter_delta };
         
+        const auto width{ nominal->GetBinWidth(i) };
+
         fisher_variance += 
-            std::pow(2 * d / p_nominal * sigma_d, 2) 
+            (std::pow(2 * d / p_nominal * sigma_d, 2) 
             + std::pow(d * d / (p_nominal * p_nominal) * sigma_p_nominal, 2)
-            + 4. * std::pow(d/ p_nominal, 3.) * (sigma_p_nominal * sigma_p_nominal) / parameter_delta;
+            + 4. * std::pow(d/ p_nominal, 3.) * (sigma_p_nominal * sigma_p_nominal) / parameter_delta)
+            * width * width;
     }
     fisher_variance *= accepted_events * accepted_events;
     m_fisher_uncertainty = std::sqrt(fisher_variance);

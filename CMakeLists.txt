@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.16)
 
 project(bosoneW LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(ROOT REQUIRED COMPONENTS 
     Core 
@@ -20,19 +20,19 @@ find_package(ROOT REQUIRED COMPONENTS
     ROOTDataFrame 
     Physics)
 
-include(${ROOT_USE_FILE})
+file(GLOB_RECURSE SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp"
+)
+
+file(GLOB_RECURSE HEADERS
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp"
+)
 
 add_executable(bosoneW
     main.cpp
-    src/WDecaySampler.cpp
-    src/FisherInformation.cpp
-    src/HistUtils.cpp
-    src/Generator.cpp
-    src/WidthSensitivity.cpp
-    src/MassSensitivity.cpp
-    include/Spectrum.hpp
+    ${SOURCES}
+    ${HEADERS}
 )
-
 
 target_link_libraries(bosoneW PRIVATE
     ROOT::Core
